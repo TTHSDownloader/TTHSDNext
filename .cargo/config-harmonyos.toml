@@ -1,0 +1,51 @@
+# HarmonyOS 交叉编译配置
+# 使用方法: cargo build --config .cargo/config-harmonyos.toml --target <target-triple> --release --features harmonyos
+
+[build]
+# 预编译静态链接 crtbegin 和 crtend
+[target.aarch64-unknown-linux-ohos]
+ar = "%OHOS_NDK%/native/llvm/bin/llvm-ar"
+linker = "%OHOS_NDK%/native/llvm/bin/clang"
+rustflags = [
+    "-C", "link-arg=--target=aarch64-unknown-linux-ohos",
+    "-C", "link-arg=-fuse-ld=lld",
+    "-C", "link-arg=-Wl,--enable-new-dtags",
+    "-C", "link-arg=-Wl,-rpath,/data/local/tmp",
+    "-C", "link-arg=-L%OHOS_NDK%/native/sysroot/usr/lib/aarch64-linux-ohos",
+]
+
+[target.armv7-unknown-linux-ohos]
+ar = "%OHOS_NDK%/native/llvm/bin/llvm-ar"
+linker = "%OHOS_NDK%/native/llvm/bin/clang"
+rustflags = [
+    "-C", "link-arg=--target=armv7-unknown-linux-ohos",
+    "-C", "link-arg=-fuse-ld=lld",
+    "-C", "link-arg=-Wl,--enable-new-dtags",
+    "-C", "link-arg=-Wl,-rpath,/data/local/tmp",
+    "-C", "link-arg=-L%OHOS_NDK%/native/sysroot/usr/lib/arm-linux-ohos",
+]
+
+[target.x86_64-unknown-linux-ohos]
+ar = "%OHOS_NDK%/native/llvm/bin/llvm-ar"
+linker = "%OHOS_NDK%/native/llvm/bin/clang"
+rustflags = [
+    "-C", "link-arg=--target=x86_64-unknown-linux-ohos",
+    "-C", "link-arg=-fuse-ld=lld",
+    "-C", "link-arg=-Wl,--enable-new-dtags",
+    "-C", "link-arg=-Wl,-rpath,/data/local/tmp",
+    "-C", "link-arg=-L%OHOS_NDK%/native/sysroot/usr/lib/x86_64-linux-ohos",
+]
+
+[target.i686-unknown-linux-ohos]
+ar = "%OHOS_NDK%/native/llvm/bin/llvm-ar"
+linker = "%OHOS_NDK%/native/llvm/bin/clang"
+rustflags = [
+    "-C", "link-arg=--target=i686-unknown-linux-ohos",
+    "-C", "link-arg=-fuse-ld=lld",
+    "-C", "link-arg=-Wl,--enable-new-dtags",
+    "-C", "link-arg=-Wl,-rpath,/data/local/tmp",
+    "-C", "link-arg=-L%OHOS_NDK%/native/sysroot/usr/lib/i686-linux-ohos",
+]
+
+[env]
+OHOS_NDK = { value = "C:\\Users\\sxxyrry_XR\\AppData\\Local\\Huawei\\Sdk\\ohos-ndk" }
