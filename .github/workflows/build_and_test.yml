@@ -1,0 +1,348 @@
+name: TTHSD Next — 跨平台构建与测试
+
+on:
+  push:
+    branches: [main, master, dev]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  #  桌面平台构建 (Windows / Linux / macOS × AMD64 / ARM64)
+  # ═══════════════════════════════════════════════════════════════
+  build-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Windows ──
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: tthsd.dll
+            lib_name: TTHSD.dll
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: tthsd_arm64.dll
+            lib_name: TTHSD.dll
+
+          # ── Linux ──
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: tthsd.so
+            lib_name: libTTHSD.so
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: tthsd_arm64.so
+            lib_name: libTTHSD.so
+            cross: true
+
+          # ── macOS ──
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: tthsd.dylib
+            lib_name: libTTHSD.dylib
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: tthsd_arm64.dylib
+            lib_name: libTTHSD.dylib
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.artifact_name }} (${{ matrix.target }})
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🦀 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: 🔧 安装 cross (ARM64 Linux 交叉编译)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: 🏗️ 编译 (原生)
+        if: "!matrix.cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: 🏗️ 编译 (交叉编译)
+        if: matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: 📋 重命名产物
+        shell: bash
+        run: |
+          SRC="target/${{ matrix.target }}/release/${{ matrix.lib_name }}"
+          DST="${{ matrix.artifact_name }}"
+          cp "$SRC" "$DST"
+          echo "产物: $DST ($(du -h "$DST" | cut -f1))"
+
+      - name: 📤 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}
+          retention-days: 30
+
+  # ═══════════════════════════════════════════════════════════════
+  #  Android 构建 (arm64-v8a / armeabi-v7a / x86_64)
+  # ═══════════════════════════════════════════════════════════════
+  build-android:
+    runs-on: ubuntu-latest
+    name: tthsd_android.so (Android)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            target: aarch64-linux-android
+            suffix: arm64
+          - abi: armeabi-v7a
+            target: armv7-linux-androideabi
+            suffix: armv7
+          - abi: x86_64
+            target: x86_64-linux-android
+            suffix: x86_64
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🦀 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: android-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: 📱 安装 cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: 🏗️ 编译 Android 库
+        run: |
+          cargo ndk \
+            --target ${{ matrix.abi }} \
+            --platform 21 \
+            build --release --features android
+
+      - name: 📋 重命名产物
+        run: |
+          SRC="target/${{ matrix.target }}/release/libTTHSD.so"
+          DST="tthsd_android_${{ matrix.suffix }}.so"
+          cp "$SRC" "$DST"
+          echo "产物: $DST ($(du -h "$DST" | cut -f1))"
+
+      - name: 📤 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: tthsd_android_${{ matrix.suffix }}.so
+          path: tthsd_android_${{ matrix.suffix }}.so
+          retention-days: 30
+
+  # ═══════════════════════════════════════════════════════════════
+  #  鸿蒙 HarmonyOS 构建 (ARM64 / x86_64)
+  # ═══════════════════════════════════════════════════════════════
+  build-harmony:
+    runs-on: ubuntu-latest
+    name: tthsd_harmony.so (HarmonyOS)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-ohos
+            suffix: arm64
+          - target: x86_64-unknown-linux-ohos
+            suffix: x86_64
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🦀 安装 Rust nightly (OHOS 支持)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: harmony-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+
+      - name: 📥 下载 OpenHarmony SDK
+        run: |
+          # 下载 OHOS NDK (根据实际版本调整 URL)
+          OHOS_SDK_VERSION="4.1"
+          OHOS_NDK_URL="https://repo.huaweicloud.com/openharmony/os/${OHOS_SDK_VERSION}/ohos-sdk-linux.tar.gz"
+          mkdir -p $HOME/ohos-sdk
+          echo "⚠️  鸿蒙 SDK 下载地址需要根据实际版本调整"
+          echo "如果此步骤失败，请手动配置 OHOS NDK 路径"
+          # curl -L "$OHOS_NDK_URL" | tar xz -C $HOME/ohos-sdk || true
+
+      - name: 🏗️ 编译鸿蒙库
+        env:
+          OHOS_NDK_HOME: ${{ github.workspace }}/ohos-sdk/linux/native
+        run: |
+          # 配置鸿蒙交叉编译链接器
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [target.aarch64-unknown-linux-ohos]
+          linker = "aarch64-unknown-linux-ohos-clang"
+
+          [target.x86_64-unknown-linux-ohos]
+          linker = "x86_64-unknown-linux-ohos-clang"
+          EOF
+
+          echo "⚠️  鸿蒙编译需要正确配置 OHOS NDK，此步骤可能需要手动调整"
+          cargo +nightly build --release --target ${{ matrix.target }} || echo "鸿蒙编译需要额外配置 OHOS NDK"
+
+      - name: 📋 重命名产物
+        run: |
+          SRC="target/${{ matrix.target }}/release/libTTHSD.so"
+          DST="tthsd_harmony_${{ matrix.suffix }}.so"
+          if [ -f "$SRC" ]; then
+            cp "$SRC" "$DST"
+            echo "产物: $DST ($(du -h "$DST" | cut -f1))"
+          else
+            echo "⚠️  鸿蒙产物未生成，需要手动配置 OHOS NDK"
+          fi
+
+      - name: 📤 上传产物
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tthsd_harmony_${{ matrix.suffix }}.so
+          path: tthsd_harmony_${{ matrix.suffix }}.so
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ═══════════════════════════════════════════════════════════════
+  #  测试 (Linux + macOS + Windows 原生)
+  # ═══════════════════════════════════════════════════════════════
+  test:
+    needs: build-desktop
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: tthsd.so
+            lib_env: LD_LIBRARY_PATH
+          - os: macos-latest
+            artifact: tthsd_arm64.dylib
+            lib_env: DYLD_LIBRARY_PATH
+          - os: windows-latest
+            artifact: tthsd.dll
+            lib_env: PATH
+    runs-on: ${{ matrix.os }}
+    name: 测试 (${{ matrix.os }})
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 📥 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: .
+
+      - name: 🐍 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 🧪 运行基础加载测试
+        shell: bash
+        run: |
+          echo "验证动态库可被加载..."
+          python3 -c "
+          import ctypes, sys, os
+          lib_name = '${{ matrix.artifact }}'
+          try:
+              lib = ctypes.CDLL('./' + lib_name)
+              print(f'[SUCCESS] Load {lib_name}')
+              sys.exit(0)
+          except Exception as e:
+              print(f'[FAILED] error: {e}')
+              sys.exit(1)
+          "
+
+  # ═══════════════════════════════════════════════════════════════
+  #  发布 Release (仅在 tag 推送时触发)
+  # ═══════════════════════════════════════════════════════════════
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-desktop, build-android, test]
+    runs-on: ubuntu-latest
+    name: 📦 发布 Release
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 下载所有产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 📦 打包为 7z
+        run: |
+          sudo apt-get install -y p7zip-full
+          mkdir -p release_pkg
+
+          # 桌面平台
+          cp artifacts/tthsd.so/tthsd.so release_pkg/ 2>/dev/null || true
+          cp artifacts/tthsd_arm64.so/tthsd_arm64.so release_pkg/ 2>/dev/null || true
+          cp artifacts/tthsd.dll/tthsd.dll release_pkg/ 2>/dev/null || true
+          cp artifacts/tthsd_arm64.dll/tthsd_arm64.dll release_pkg/ 2>/dev/null || true
+          cp artifacts/tthsd.dylib/tthsd.dylib release_pkg/ 2>/dev/null || true
+          cp artifacts/tthsd_arm64.dylib/tthsd_arm64.dylib release_pkg/ 2>/dev/null || true
+
+          # Android
+          mkdir -p release_pkg/android
+          cp artifacts/tthsd_android_arm64.so/tthsd_android_arm64.so release_pkg/android/ 2>/dev/null || true
+          cp artifacts/tthsd_android_armv7.so/tthsd_android_armv7.so release_pkg/android/ 2>/dev/null || true
+          cp artifacts/tthsd_android_x86_64.so/tthsd_android_x86_64.so release_pkg/android/ 2>/dev/null || true
+
+          # 鸿蒙
+          mkdir -p release_pkg/harmony
+          cp artifacts/tthsd_harmony_arm64.so/tthsd_harmony_arm64.so release_pkg/harmony/ 2>/dev/null || true
+          cp artifacts/tthsd_harmony_x86_64.so/tthsd_harmony_x86_64.so release_pkg/harmony/ 2>/dev/null || true
+
+          ls -lhR release_pkg/
+
+          cd release_pkg
+          7z a -t7z -m0=lzma2 -mx=9 ../TTHSD-${{ github.ref_name }}.7z *
+
+      - name: 🚀 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TTHSD-${{ github.ref_name }}.7z
+          generate_release_notes: true
