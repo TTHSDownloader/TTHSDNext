@@ -15,7 +15,7 @@ ToDo
 
 /TTHSD_Golang/
 
-/jniLibs/
+jniLibs/
 
 # Rust
 target/
