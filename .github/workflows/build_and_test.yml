@@ -69,8 +69,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            TTHSDNext_src/target
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('TTHSDNext_src/Cargo.lock') }}
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-${{ matrix.target }}-
 
@@ -80,18 +80,16 @@ jobs:
 
       - name: 🏗️ 编译 (原生)
         if: "!matrix.cross"
-        working-directory: TTHSDNext_src
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: 🏗️ 编译 (交叉编译)
         if: matrix.cross
-        working-directory: TTHSDNext_src
         run: cross build --release --target ${{ matrix.target }}
 
       - name: 📋 重命名产物
         shell: bash
         run: |
-          SRC="TTHSDNext_src/target/${{ matrix.target }}/release/${{ matrix.lib_name }}"
+          SRC="target/${{ matrix.target }}/release/${{ matrix.lib_name }}"
           DST="${{ matrix.artifact_name }}"
           cp "$SRC" "$DST"
           echo "产物: $DST ($(du -h "$DST" | cut -f1))"
@@ -138,14 +136,13 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            TTHSDNext_src/target
-          key: android-cargo-${{ matrix.target }}-${{ hashFiles('TTHSDNext_src/Cargo.lock') }}
+            target
+          key: android-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
 
       - name: 📱 安装 cargo-ndk
         run: cargo install cargo-ndk
 
       - name: 🏗️ 编译 Android 库
-        working-directory: TTHSDNext_src
         run: |
           cargo ndk \
             --target ${{ matrix.abi }} \
@@ -154,7 +151,7 @@ jobs:
 
       - name: 📋 重命名产物
         run: |
-          SRC="TTHSDNext_src/target/${{ matrix.target }}/release/libTTHSD.so"
+          SRC="target/${{ matrix.target }}/release/libTTHSD.so"
           DST="tthsd_android_${{ matrix.suffix }}.so"
           cp "$SRC" "$DST"
           echo "产物: $DST ($(du -h "$DST" | cut -f1))"
@@ -196,8 +193,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            TTHSDNext_src/target
-          key: harmony-cargo-${{ matrix.target }}-${{ hashFiles('TTHSDNext_src/Cargo.lock') }}
+            target
+          key: harmony-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
 
       - name: 📥 下载 OpenHarmony SDK
         run: |
@@ -210,7 +207,6 @@ jobs:
           # curl -L "$OHOS_NDK_URL" | tar xz -C $HOME/ohos-sdk || true
 
       - name: 🏗️ 编译鸿蒙库
-        working-directory: TTHSDNext_src
         env:
           OHOS_NDK_HOME: ${{ github.workspace }}/ohos-sdk/linux/native
         run: |
@@ -229,7 +225,7 @@ jobs:
 
       - name: 📋 重命名产物
         run: |
-          SRC="TTHSDNext_src/target/${{ matrix.target }}/release/libTTHSD.so"
+          SRC="target/${{ matrix.target }}/release/libTTHSD.so"
           DST="tthsd_harmony_${{ matrix.suffix }}.so"
           if [ -f "$SRC" ]; then
             cp "$SRC" "$DST"

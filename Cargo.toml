@@ -1,10 +1,10 @@
 [package]
-name = "tthsd"
-version = "0.1.0"
+name = "TTHSD"
+version = "0.5.1-IV2"
 edition = "2024"
 
 [lib]
-name = "tthsd"
+name = "TTHSD"
 crate-type = ["cdylib"]
 
 [dependencies]

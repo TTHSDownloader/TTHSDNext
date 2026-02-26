@@ -10,50 +10,8 @@ dist/
 .venv/
 *.exe
 
+
 ToDo
 /some.txt
 
 /TTHSD_Golang/
-
-/jniLibs/
-
-# Rust
-target/
-**/*.rs.bk
-Cargo.lock
-.*/
-.*
-
-
-!.github/
-!.gitignore
-!.cargo/
-
-*_Docs/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Editor / OS
-.vscode/
-.idea/
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Temporary Test Files
-*.bin
-temp_*/
-test_env/
-logs/
-
-*.7z
-!TTHSD_Release.7z
