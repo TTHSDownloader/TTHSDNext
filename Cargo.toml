@@ -1,6 +1,6 @@
 [package]
 name = "TTHSD"
-version = "0.5.1-IV2"
+version = "0.1.0-IV2"
 edition = "2024"
 
 [lib]
