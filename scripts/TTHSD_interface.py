@@ -3,14 +3,14 @@ TTHSD_interface.py - TT 高速下载器 Python 接口封装
 
 兼容 TTHSD Next (Rust 版本) 与 TTHSD Golang 版本的动态库。
 自动根据操作系统选择动态库文件名：
-  - Windows: tthsd.dll
-  - macOS:   tthsd.dylib
-  - Linux:   tthsd.so
+  - Windows: TTHSD.dll
+  - macOS:   TTHSD.dylib
+  - Linux:   TTHSD.so
 
 依赖: Python 3.11+, 标准库 (ctypes, json, threading, queue, weakref)
 
-作者: **项目团队**：[查看文档](https://docss.sxxyrry.qzz.io/TTHSD/zh/acknowledgments/acknowledgments.html#%E9%A1%B9%E7%9B%AE%E5%9B%A2%E9%98%9F)
-文档: https://docss.sxxyrry.qzz.io/TTHSD/
+作者: 根据 TTHSD 官方 API 文档自动生成
+文档: http://p.ceroxe.fun:58000/TTHSD/
 """
 
 import ctypes
@@ -59,11 +59,11 @@ def _default_dll_name() -> str:
     """根据当前操作系统返回默认动态库文件名。"""
     system = platform.system()
     if system == "Windows":
-        return "tthsd.dll"
+        return "TTHSD.dll"
     elif system == "Darwin":
-        return "tthsd.dylib"
+        return "TTHSD.dylib"
     else:
-        return "tthsd.so"
+        return "TTHSD.so"
 
 
 def _build_tasks_json(
@@ -155,7 +155,7 @@ class TTHSDownloader:
         self._setup_dll_signatures()
 
         # 保存回调函数的 C 可调用对象，防止被 GC 回收导致崩溃
-        self._callback_refs: dict[int, ctypes.CFUNCTYPE] = {} # pyright: ignore[reportGeneralTypeIssues]
+        self._callback_refs: dict[int, ctypes.CFUNCTYPE] = {}
 
     # ------------------------------------------------------------------
     # DLL 函数签名配置
@@ -221,7 +221,7 @@ class TTHSDownloader:
     def _make_c_callback(
         self,
         user_callback: Callable[[dict, dict], None],
-    ) -> ctypes.CFUNCTYPE: # pyright: ignore[reportGeneralTypeIssues]
+    ) -> ctypes.CFUNCTYPE:
         """
         将 Python 回调函数包装为 C 可调用对象。
 
@@ -230,8 +230,8 @@ class TTHSDownloader:
         """
         def _inner(event_ptr: ctypes.c_char_p, msg_ptr: ctypes.c_char_p):
             try:
-                event_str = event_ptr.decode("utf-8") if event_ptr else "{}" # pyright: ignore[reportAttributeAccessIssue]
-                msg_str = msg_ptr.decode("utf-8") if msg_ptr else "{}" # pyright: ignore[reportAttributeAccessIssue]
+                event_str = event_ptr.decode("utf-8") if event_ptr else "{}"
+                msg_str = msg_ptr.decode("utf-8") if msg_ptr else "{}"
                 event_dict = json.loads(event_str)
                 msg_dict = json.loads(msg_str)
                 user_callback(event_dict, msg_dict)
@@ -243,7 +243,7 @@ class TTHSDownloader:
         self._callback_refs[id(c_cb)] = c_cb
         return c_cb
 
-    def _release_c_callback(self, c_cb: ctypes.CFUNCTYPE): # pyright: ignore[reportGeneralTypeIssues]
+    def _release_c_callback(self, c_cb: ctypes.CFUNCTYPE):
         """释放已不再需要的 C 回调引用。"""
         key = id(c_cb)
         self._callback_refs.pop(key, None)
