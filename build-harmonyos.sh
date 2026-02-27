@@ -1,52 +1,45 @@
 #!/bin/bash
-# Android 动态库构建脚本 (Linux/macOS)
-# 用法: ./build-android.sh [架构]
-# 架构选项: arm64-v8a (默认), armeabi-v7a, x86, x86_64
-
-set -e
+# HarmonyOS 动态库构建脚本
+# 用法: ./build-harmonyos.sh [架构]
+# 架构选项: arm64-v8a (默认), armeabi-v7a, x86_64, x86
 
 # 设置默认架构
 ARCH=${1:-arm64-v8a}
 
 echo "========================================"
-echo "  TTHSD Android 动态库构建脚本"
+echo "  TTHSD HarmonyOS 动态库构建脚本"
 echo "========================================"
 echo ""
 
-# 检测操作系统并设置 NDK 路径
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    NDK_PATH="$HOME/Library/Android/sdk/ndk/26.1.10909125"
-else
-    # Linux
-    NDK_PATH="$HOME/Android/Sdk/ndk/26.1.10909125"
-fi
-
-# 检查 NDK 路径是否存在
-if [ ! -d "$NDK_PATH" ]; then
-    echo "[错误] 找不到 Android NDK"
-    echo "请修改脚本中的 NDK_PATH 为正确的路径"
-    echo "当前路径: $NDK_PATH"
+# 检查 OHOS NDK 路径
+OHOS_NDK=${OHOS_NDK:-"$HOME/Library/Huawei/Sdk/ohos-ndk"}
+if [ ! -d "$OHOS_NDK" ]; then
+    echo "[错误] 找不到 HarmonyOS NDK"
+    echo "请设置环境变量 OHOS_NDK 为正确的路径"
     exit 1
 fi
 
-echo "[信息] 使用 NDK: $NDK_PATH"
+echo "[信息] 使用 HarmonyOS NDK: $OHOS_NDK"
 echo "[信息] 目标架构: $ARCH"
 echo ""
 
 # 映射架构名称到 Rust 目标
-case "$ARCH" in
+case $ARCH in
     arm64-v8a)
-        RUST_TARGET=aarch64-linux-android
+        RUST_TARGET=aarch64-unknown-linux-ohos
+        OHOS_ARCH=arm64-v8a
         ;;
     armeabi-v7a)
-        RUST_TARGET=armv7-linux-androideabi
+        RUST_TARGET=armv7-unknown-linux-ohos
+        OHOS_ARCH=armeabi-v7a
         ;;
     x86)
-        RUST_TARGET=i686-linux-android
+        RUST_TARGET=i686-unknown-linux-ohos
+        OHOS_ARCH=x86
         ;;
     x86_64)
-        RUST_TARGET=x86_64-linux-android
+        RUST_TARGET=x86_64-unknown-linux-ohos
+        OHOS_ARCH=x86_64
         ;;
     *)
         echo "[错误] 不支持的架构: $ARCH"
@@ -56,6 +49,7 @@ case "$ARCH" in
 esac
 
 echo "[信息] Rust 目标: $RUST_TARGET"
+echo "[信息] HarmonyOS 架构: $OHOS_ARCH"
 echo ""
 
 # 检查是否已添加 Rust 目标
@@ -72,14 +66,14 @@ if ! rustup target list --installed | grep -q "$RUST_TARGET"; then
 fi
 
 # 创建输出目录
-OUTPUT_DIR="jniLibs/$ARCH"
+OUTPUT_DIR="HarmonyOS/libs/$OHOS_ARCH"
 mkdir -p "$OUTPUT_DIR"
 
 echo "[信息] 开始编译..."
 echo ""
 
-# 编译项目
-cargo build --target "$RUST_TARGET" --release --features android
+# 编译项目（使用自定义配置文件）
+cargo build --target "$RUST_TARGET" --release --config .cargo/config-harmonyos.toml
 
 if [ $? -ne 0 ]; then
     echo "[错误] 编译失败"
@@ -90,7 +84,7 @@ echo ""
 echo "[信息] 复制库文件到 $OUTPUT_DIR..."
 
 # 复制生成的 .so 文件
-cp "target/$RUST_TARGET/release/tthsd.so" "$OUTPUT_DIR/tthsd.so"
+cp "target/$RUST_TARGET/release/tthsd.so" "$OUTPUT_DIR/tthsd_harmonyos.so"
 
 if [ $? -ne 0 ]; then
     echo "[错误] 复制文件失败"
@@ -101,9 +95,11 @@ echo ""
 echo "========================================"
 echo "  构建成功!"
 echo "========================================"
-echo "输出文件: $OUTPUT_DIR/tthsd.so"
+echo "输出文件: $OUTPUT_DIR/tthsd_harmonyos.so"
 echo ""
 echo "使用方法:"
-echo "1. 将 jniLibs 文件夹复制到 Android 项目的 src/main/ 目录"
-echo "2. 在 Java/Kotlin 代码中加载库: System.loadLibrary(\"tthsd\")"
+echo "1. 将 HarmonyOS/libs 文件夹复制到 HarmonyOS 项目的 entry/libs/ 目录"
+echo "2. 在 build-profile.json5 中配置 abiFilters: [\"$OHOS_ARCH\"]"
+echo "3. 在 ArkTS 代码中加载库: System.loadLibrary(\"tthsd_harmonyos\")"
+echo "4. 调用 C 接口函数进行下载操作"
 echo ""

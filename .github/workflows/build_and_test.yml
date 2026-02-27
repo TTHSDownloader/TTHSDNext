@@ -24,11 +24,11 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: tthsd.dll
-            lib_name: TTHSD.dll
+            lib_name: tthsd.dll
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             artifact_name: tthsd_arm64.dll
-            lib_name: TTHSD.dll
+            lib_name: tthsd.dll
 
           # ── Linux ──
           - os: ubuntu-latest

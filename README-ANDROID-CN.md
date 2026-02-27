@@ -49,7 +49,7 @@ build-android.bat x86_64
 build-all-android.bat
 ```
 
-输出文件位于 `jniLibs\{架构}\libTTHSD.so`
+输出文件位于 `jniLibs\{架构}\tthsd_android.so`
 
 #### Linux / macOS 系统
 
@@ -91,7 +91,7 @@ chmod +x build-all-android.sh
 ./build-all-android.sh
 ```
 
-输出文件位于 `jniLibs/{架构}/libTTHSD.so`
+输出文件位于 `jniLibs/{架构}/tthsd_android.so`
 
 #### 方法二：使用 cargo-ndk（跨平台，更灵活）
 
@@ -137,7 +137,7 @@ cargo ndk -t arm64-v7a -t arm64-v8a -t x86 -t x86_64 -o ./jniLibs build --releas
 # 编译 arm64-v8a
 cargo build --target aarch64-linux-android --release --features android
 
-# 输出文件: target\aarch64-linux-android\release\libTTHSD.so
+# 输出文件: target\aarch64-linux-android\release\tthsd_android.so
 ```
 
 ### 在 Android 项目中使用
@@ -196,16 +196,16 @@ cargo build --target aarch64-linux-android --release --features android
 | x86 | i686-linux-android | 32位 x86（模拟器） |
 | x86_64 | x86_64-linux-android | 64位 x86（模拟器） |
 
-### 编译 Windows DLL（保留原有功能）
+## 编译 Windows DLL（保留原有功能）
 
 ```bash
 # 编译 Windows 动态库
 cargo build --release
 
-# 输出文件: target\release\TTHSD.dll
+# 输出文件: target\release\tthsd.dll
 ```
 
-### 编译其他平台
+## 编译其他平台
 
 ```bash
 # Linux 动态库 (.so)

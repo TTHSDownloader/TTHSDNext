@@ -3,14 +3,14 @@ TTHSD_interface.py - TT 高速下载器 Python 接口封装
 
 兼容 TTHSD Next (Rust 版本) 与 TTHSD Golang 版本的动态库。
 自动根据操作系统选择动态库文件名：
-  - Windows: TTHSD.dll
-  - macOS:   TTHSD.dylib
-  - Linux:   TTHSD.so
+  - Windows: tthsd.dll
+  - macOS:   tthsd.dylib
+  - Linux:   tthsd.so
 
 依赖: Python 3.11+, 标准库 (ctypes, json, threading, queue, weakref)
 
-作者: 根据 TTHSD 官方 API 文档自动生成
-文档: http://p.ceroxe.fun:58000/TTHSD/
+作者: 23XR Studio
+文档: https://docss.sxxyrry.qzz.io/TTHSD/
 """
 
 import ctypes
@@ -23,7 +23,7 @@ import sys
 import threading
 import weakref
 from pathlib import Path
-from typing import Callable, Optional
+from collections.abc import Callable
 
 # ------------------------------------------------------------------
 # 内部日志器
@@ -59,18 +59,18 @@ def _default_dll_name() -> str:
     """根据当前操作系统返回默认动态库文件名。"""
     system = platform.system()
     if system == "Windows":
-        return "TTHSD.dll"
+        return "tthsd.dll"
     elif system == "Darwin":
-        return "TTHSD.dylib"
+        return "tthsd.dylib"
     else:
-        return "TTHSD.so"
+        return "tthsd.so"
 
 
 def _build_tasks_json(
     urls: list[str],
     save_paths: list[str],
-    show_names: Optional[list[str]] = None,
-    ids: Optional[list[str]] = None,
+    show_names: list[str] | None = None,
+    ids: list[str] | None = None,
 ) -> str:
     """
     将 URL / 保存路径列表打包为 DLL 所接受的 JSON 字符串。
@@ -132,7 +132,7 @@ class TTHSDownloader:
         def my_callback(event: dict, msg: dict) -> None: ...
     """
 
-    def __init__(self, dll_path: Optional[str | Path] = None):
+    def __init__(self, dll_path: str | Path | None = None):
         """
         初始化下载器封装。
 
@@ -155,7 +155,7 @@ class TTHSDownloader:
         self._setup_dll_signatures()
 
         # 保存回调函数的 C 可调用对象，防止被 GC 回收导致崩溃
-        self._callback_refs: dict[int, ctypes.CFUNCTYPE] = {}
+        self._callback_refs: dict[int, ctypes.CFUNCTYPE] = {} # pyright: ignore[reportGeneralTypeIssues]
 
     # ------------------------------------------------------------------
     # DLL 函数签名配置
@@ -221,7 +221,7 @@ class TTHSDownloader:
     def _make_c_callback(
         self,
         user_callback: Callable[[dict, dict], None],
-    ) -> ctypes.CFUNCTYPE:
+    ) -> ctypes.CFUNCTYPE: # pyright: ignore[reportGeneralTypeIssues]
         """
         将 Python 回调函数包装为 C 可调用对象。
 
@@ -230,8 +230,8 @@ class TTHSDownloader:
         """
         def _inner(event_ptr: ctypes.c_char_p, msg_ptr: ctypes.c_char_p):
             try:
-                event_str = event_ptr.decode("utf-8") if event_ptr else "{}"
-                msg_str = msg_ptr.decode("utf-8") if msg_ptr else "{}"
+                event_str = event_ptr.value.decode("utf-8") if event_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
+                msg_str = msg_ptr.value.decode("utf-8") if msg_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
                 event_dict = json.loads(event_str)
                 msg_dict = json.loads(msg_str)
                 user_callback(event_dict, msg_dict)
@@ -243,7 +243,7 @@ class TTHSDownloader:
         self._callback_refs[id(c_cb)] = c_cb
         return c_cb
 
-    def _release_c_callback(self, c_cb: ctypes.CFUNCTYPE):
+    def _release_c_callback(self, c_cb: ctypes.CFUNCTYPE): # pyright: ignore[reportGeneralTypeIssues]
         """释放已不再需要的 C 回调引用。"""
         key = id(c_cb)
         self._callback_refs.pop(key, None)
@@ -258,13 +258,13 @@ class TTHSDownloader:
         save_paths: list[str],
         thread_count: int = 64,
         chunk_size_mb: int = 10,
-        callback: Optional[Callable[[dict, dict], None]] = None,
+        callback: Callable[[dict, dict], None] | None = None,
         use_callback_url: bool = False,
-        user_agent: Optional[str] = None,
-        remote_callback_url: Optional[str] = None,
-        use_socket: Optional[bool] = None,
-        show_names: Optional[list[str]] = None,
-        ids: Optional[list[str]] = None,
+        user_agent: str | None = None,
+        remote_callback_url: str | None = None,
+        use_socket: bool | None = None,
+        show_names: list[str] | None = None,
+        ids: list[str] | None = None,
     ) -> int:
         """
         创建下载器实例，但**不启动下载**。
@@ -329,14 +329,14 @@ class TTHSDownloader:
         save_paths: list[str],
         thread_count: int = 64,
         chunk_size_mb: int = 10,
-        callback: Optional[Callable[[dict, dict], None]] = None,
+        callback: Callable[[dict, dict], None] | None = None,
         use_callback_url: bool = False,
-        user_agent: Optional[str] = None,
-        remote_callback_url: Optional[str] = None,
-        use_socket: Optional[bool] = None,
-        is_multiple: Optional[bool] = None,
-        show_names: Optional[list[str]] = None,
-        ids: Optional[list[str]] = None,
+        user_agent: str | None = None,
+        remote_callback_url: str | None = None,
+        use_socket: bool | None = None,
+        is_multiple: bool | None = None,
+        show_names: list[str] | None = None,
+        ids: list[str] | None = None,
     ) -> int:
         """
         创建下载器实例并**立即启动下载**。
@@ -575,10 +575,10 @@ class EventLogger:
 def quick_download(
     urls: list[str],
     save_paths: list[str],
-    dll_path: Optional[str | Path] = None,
+    dll_path: str | Path | None = None,
     thread_count: int = 64,
     chunk_size_mb: int = 10,
-    callback: Optional[Callable[[dict, dict], None]] = None,
+    callback: Callable[[dict, dict], None] | None = None,
     is_multiple: bool = False,
 ) -> int:
     """
