@@ -24,32 +24,32 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: tthsd.dll
-            lib_name: tthsd.dll
+            lib_name: TTHSD.dll
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             artifact_name: tthsd_arm64.dll
-            lib_name: tthsd.dll
+            lib_name: TTHSD.dll
 
           # ── Linux ──
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: tthsd.so
-            lib_name: tthsd.so
+            lib_name: libTTHSD.so
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             artifact_name: tthsd_arm64.so
-            lib_name: tthsd.so
+            lib_name: libTTHSD.so
             cross: true
 
           # ── macOS ──
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: tthsd.dylib
-            lib_name: tthsd.dylib
+            lib_name: libTTHSD.dylib
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: tthsd_arm64.dylib
-            lib_name: tthsd.dylib
+            lib_name: libTTHSD.dylib
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.artifact_name }} (${{ matrix.target }})
