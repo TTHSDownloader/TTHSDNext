@@ -12,6 +12,7 @@ pub struct PerformanceMonitor {
     current_speed: Arc<RwLock<f64>>,
     average_speed: Arc<RwLock<f64>>,
     peak_speed: Arc<RwLock<f64>>,
+    total_expected_bytes: Arc<AtomicI64>,
     chunk_downloads: Arc<AtomicI64>,
     failed_chunks: Arc<AtomicI64>,
     retried_chunks: Arc<AtomicI64>,
@@ -27,6 +28,7 @@ impl PerformanceMonitor {
             current_speed: Arc::new(RwLock::new(0.0)),
             average_speed: Arc::new(RwLock::new(0.0)),
             peak_speed: Arc::new(RwLock::new(0.0)),
+            total_expected_bytes: Arc::new(AtomicI64::new(0)),
             chunk_downloads: Arc::new(AtomicI64::new(0)),
             failed_chunks: Arc::new(AtomicI64::new(0)),
             retried_chunks: Arc::new(AtomicI64::new(0)),
@@ -36,6 +38,10 @@ impl PerformanceMonitor {
     pub async fn add_bytes(&self, bytes: i64) {
         self.total_bytes.fetch_add(bytes, Ordering::Relaxed);
         self.update_speed().await;
+    }
+
+    pub fn set_total_bytes(&self, bytes: i64) {
+        self.total_expected_bytes.store(bytes, Ordering::Relaxed);
     }
 
     pub fn add_chunk_download(&self) {
@@ -106,9 +112,11 @@ impl PerformanceMonitor {
         let failed_chunks = self.failed_chunks.load(Ordering::Relaxed);
         let retried_chunks = self.retried_chunks.load(Ordering::Relaxed);
         let elapsed_time = self.start_time.elapsed().as_secs_f64();
+        let total_expected = self.total_expected_bytes.load(Ordering::Relaxed);
 
         let mut stats = HashMap::new();
         stats.insert("total_bytes".to_string(), serde_json::Value::Number(serde_json::Number::from(total_bytes)));
+        stats.insert("Total".to_string(), serde_json::Value::Number(serde_json::Number::from(total_expected)));
         stats.insert("current_speed_bps".to_string(), serde_json::Value::Number(serde_json::Number::from(current_speed as i64)));
         stats.insert("current_speed_mbps".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(current_speed / (1024.0 * 1024.0)).unwrap_or(serde_json::Number::from(0))));
         stats.insert("average_speed_bps".to_string(), serde_json::Value::Number(serde_json::Number::from(average_speed as i64)));

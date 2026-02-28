@@ -317,6 +317,11 @@ impl Downloader for HTTPDownloader {
         let file_size = self.get_file_size(&task.url).await?;
 
         self.status = Some(DownloadStatus::new(file_size));
+        
+        // 更新全局监控的总大小
+        if let Some(ref monitor) = self.monitor {
+            monitor.set_total_bytes(file_size);
+        }
 
         let file = OpenOptions::new()
             .write(true)

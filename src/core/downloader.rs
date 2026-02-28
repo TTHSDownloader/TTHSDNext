@@ -191,7 +191,14 @@ impl HSDownloader {
                 tokio::select! {
                     _ = interval.tick() => {
                         if let Some(monitor) = get_global_monitor().await {
-                            let stats = monitor.get_stats().await;
+                            let mut stats = monitor.get_stats().await;
+                            
+                            // 兼容旧版 Golang 接口的字段命名 (各语言 Bindings 依赖这两个字段计算进度)
+                            if let Some(total_bytes) = stats.get("total_bytes").cloned() {
+                                stats.insert("Downloaded".to_string(), total_bytes);
+                            }
+                            // 进度条的 Total 值，在 start_download 的最开始通过 file_size 确定并放进 monitor 里，如果是总计可以取某个特定值。
+                            // 目前我们从全局监控拿不到总文件大小，所以只能先通过 Downloader 自身状态去取
                             let event = Event {
                                 event_type: EventType::Update,
                                 name: "进度更新".to_string(),
@@ -294,7 +301,13 @@ impl HSDownloader {
                 tokio::select! {
                     _ = interval.tick() => {
                         if let Some(monitor) = get_global_monitor().await {
-                            let stats = monitor.get_stats().await;
+                            let mut stats = monitor.get_stats().await;
+                            
+                            // 兼容旧版 Golang 接口的字段命名 (各语言 Bindings 依赖这两个字段计算进度)
+                            if let Some(total_bytes) = stats.get("total_bytes").cloned() {
+                                stats.insert("Downloaded".to_string(), total_bytes);
+                            }
+                            
                             let event = Event {
                                 event_type: EventType::Update,
                                 name: "进度更新".to_string(),
