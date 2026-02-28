@@ -278,23 +278,6 @@ impl HTTPDownloader {
         Ok(())
     }
 
-    async fn send_progress_update(&self, downloaded: i64, total: i64, task_id: &str) {
-        if let Some(ref config) = self.base.config {
-            let event = Event {
-                event_type: EventType::Update,
-                name: String::new(),
-                show_name: String::new(),
-                id: task_id.to_string(),
-            };
-
-            let mut data = serde_json::Map::new();
-            data.insert("Downloaded".to_string(), serde_json::Value::Number(serde_json::Number::from(downloaded)));
-            data.insert("Total".to_string(), serde_json::Value::Number(serde_json::Number::from(total)));
-
-            let _ = send_message(event, data.into_iter().map(|(k, v)| (k, v)).collect(), config, &self.base.ws_client, &self.base.socket_client).await;
-        }
-    }
-
     async fn send_error_message(&self, msg: String) {
         if let Some(ref config) = self.base.config {
             let event = Event {
