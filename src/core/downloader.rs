@@ -180,11 +180,43 @@ impl HSDownloader {
             });
         }
 
+        // 启动进度监控上报任务
+        let (progress_done_tx, mut progress_done_rx) = tokio::sync::mpsc::channel::<()>(1);
+        let monitor_config = self.config.clone();
+        let monitor_ws = self.ws_client.clone();
+        let monitor_socket = self.socket_client.clone();
+        let monitor_handle = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_millis(500));
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {
+                        if let Some(monitor) = get_global_monitor().await {
+                            let stats = monitor.get_stats().await;
+                            let event = Event {
+                                event_type: EventType::Update,
+                                name: "进度更新".to_string(),
+                                show_name: "全局".to_string(),
+                                id: String::new(),
+                            };
+                            let _ = send_message(event, stats, &monitor_config, &monitor_ws, &monitor_socket).await;
+                        }
+                    }
+                    _ = progress_done_rx.recv() => {
+                        break;
+                    }
+                }
+            }
+        });
+
         while let Some(result) = join_set.join_next().await {
             if let Err(e) = result {
                 eprintln!("Task failed: {:?}", e);
             }
         }
+
+        // 停止进度监控
+        let _ = progress_done_tx.send(()).await;
+        let _ = monitor_handle.await;
 
         let end_event = Event {
             event_type: EventType::End,
@@ -251,11 +283,43 @@ impl HSDownloader {
             });
         }
 
+        // 启动进度监控上报任务
+        let (progress_done_tx, mut progress_done_rx) = tokio::sync::mpsc::channel::<()>(1);
+        let monitor_config = self.config.clone();
+        let monitor_ws = self.ws_client.clone();
+        let monitor_socket = self.socket_client.clone();
+        let monitor_handle = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_millis(500));
+            loop {
+                tokio::select! {
+                    _ = interval.tick() => {
+                        if let Some(monitor) = get_global_monitor().await {
+                            let stats = monitor.get_stats().await;
+                            let event = Event {
+                                event_type: EventType::Update,
+                                name: "进度更新".to_string(),
+                                show_name: "全局".to_string(),
+                                id: String::new(),
+                            };
+                            let _ = send_message(event, stats, &monitor_config, &monitor_ws, &monitor_socket).await;
+                        }
+                    }
+                    _ = progress_done_rx.recv() => {
+                        break;
+                    }
+                }
+            }
+        });
+
         while let Some(result) = join_set.join_next().await {
             if let Err(e) = result {
                 eprintln!("Task failed: {:?}", e);
             }
         }
+
+        // 停止进度监控
+        let _ = progress_done_tx.send(()).await;
+        let _ = monitor_handle.await;
 
         let end_event = Event {
             event_type: EventType::End,
