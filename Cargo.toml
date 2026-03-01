@@ -19,6 +19,8 @@ num_cpus = "1.16"
 tokio-util = "0.7"
 futures = "0.3.32"
 once_cell = "1.21.3"
+suppaftp = { version = "8.0", features = ["tokio"] }
+url = "2"
 jni = { version = "0.21", optional = true }
 lazy_static = "1.5.0"
 

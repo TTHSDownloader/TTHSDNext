@@ -1,6 +1,7 @@
 pub mod downloader;
 pub mod downloader_interface;
 pub mod http_downloader;
+pub mod ftp_downloader;
 pub mod socket_client;
 pub mod websocket_client;
 pub mod send_message;

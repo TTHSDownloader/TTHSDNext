@@ -3,6 +3,7 @@ use tokio::sync::RwLock;
 use super::downloader::DownloadConfig;
 use super::downloader_interface::Downloader;
 use super::http_downloader::HTTPDownloader;
+use super::ftp_downloader::FTPDownloader;
 
 /// 下载器工厂函数
 ///
@@ -31,8 +32,8 @@ pub async fn get_downloader(
 
     match scheme {
         Protocol::Http => Box::new(HTTPDownloader::new(config).await),
+        Protocol::Ftp  => Box::new(FTPDownloader::new(config).await),
         // 后续协议在此扩展:
-        // Protocol::Ftp  => Box::new(FTPDownloader::new(config).await),
         // Protocol::Sftp => Box::new(SFTPDownloader::new(config).await),
         // Protocol::BitTorrent => Box::new(TorrentDownloader::new(config).await),
         // Protocol::Ed2k => Box::new(ED2KDownloader::new(config).await),
