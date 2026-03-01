@@ -5,6 +5,9 @@ use super::downloader_interface::Downloader;
 use super::http_downloader::HTTPDownloader;
 use super::ftp_downloader::FTPDownloader;
 use super::torrent_downloader::TorrentDownloader;
+use super::metalink_downloader::MetalinkDownloader;
+use super::ed2k_downloader::ED2KDownloader;
+use super::http3_downloader::HTTP3Downloader;
 
 /// 下载器工厂函数
 ///
@@ -32,12 +35,15 @@ pub async fn get_downloader(
     let scheme = detect_scheme(&url);
 
     match scheme {
-        Protocol::Http => Box::new(HTTPDownloader::new(config).await),
-        Protocol::Ftp  => Box::new(FTPDownloader::new(config).await),
+        // HTTP/3: 先尝试 QUIC，失败自动降级到 HTTP/1.1+2
+        Protocol::Http => {
+            let h3 = HTTP3Downloader::new(config.clone()).await;
+            Box::new(h3) as Box<dyn Downloader>
+        }
+        Protocol::Ftp => Box::new(FTPDownloader::new(config).await),
         Protocol::BitTorrent => Box::new(TorrentDownloader::new(config).await),
-        // 后续协议在此扩展:
-        // Protocol::Sftp => Box::new(SFTPDownloader::new(config).await),
-        // Protocol::Ed2k => Box::new(ED2KDownloader::new(config).await),
+        Protocol::Ed2k => Box::new(ED2KDownloader::new(config).await),
+        Protocol::Metalink => Box::new(MetalinkDownloader::new(config).await),
         _ => {
             eprintln!("警告: 未知协议 '{}', 回退到 HTTP 下载器", url.split("://").next().unwrap_or("unknown"));
             Box::new(HTTPDownloader::new(config).await)
@@ -54,6 +60,7 @@ pub enum Protocol {
     BitTorrent,
     Ed2k,
     Metalink,
+    Http3,
     Unknown,
 }
 

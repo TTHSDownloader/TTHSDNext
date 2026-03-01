@@ -24,6 +24,14 @@ url = "2"
 jni = { version = "0.21", optional = true }
 lazy_static = "1.5.0"
 librqbit = { version = "8.1", default-features = false, features = ["rust-tls"] }
+metalink = "0.1"
+h3 = "0.0.8"
+h3-quinn = "0.0.10"
+quinn = { version = "0.11", default-features = false, features = ["rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+webpki-roots = "0.26"
+bytes = "1"
+http = "1"
 
 [features]
 default = []
