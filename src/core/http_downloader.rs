@@ -13,6 +13,23 @@ use super::send_message::send_message;
 
 const STALL_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// 全局 HTTP 客户端连接池 (所有 HTTPDownloader 实例共享)
+static GLOBAL_HTTP_CLIENT: tokio::sync::OnceCell<Client> = tokio::sync::OnceCell::const_new();
+
+/// 获取全局复用的 HTTP Client
+async fn get_global_client() -> Client {
+    GLOBAL_HTTP_CLIENT.get_or_init(|| async {
+        Client::builder()
+            .connect_timeout(Duration::from_secs(15))
+            .pool_idle_timeout(Duration::from_secs(90))
+            .pool_max_idle_per_host(32)
+            .tcp_keepalive(Duration::from_secs(30))
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .build()
+            .expect("Failed to create HTTP client")
+    }).await.clone()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadSnapshot {
     #[serde(rename = "downloaded")]
@@ -104,16 +121,7 @@ pub struct HTTPDownloader {
 
 impl HTTPDownloader {
     pub async fn new(config: Arc<RwLock<DownloadConfig>>) -> Self {
-        let mut headers = HeaderMap::new();
-        headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"));
-
-        let client = Client::builder()
-            .connect_timeout(Duration::from_secs(15))
-            .pool_idle_timeout(Duration::from_secs(90))
-            .tcp_keepalive(Duration::from_secs(30))
-            .build()
-            .expect("Failed to create HTTP client");
-
+        let client = get_global_client().await;
         let monitor = super::performance_monitor::get_global_monitor().await;
 
         HTTPDownloader {
