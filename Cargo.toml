@@ -23,6 +23,7 @@ suppaftp = { version = "8.0", features = ["tokio"] }
 url = "2"
 jni = { version = "0.21", optional = true }
 lazy_static = "1.5.0"
+librqbit = { version = "8.1", default-features = false, features = ["rust-tls"] }
 
 [features]
 default = []
