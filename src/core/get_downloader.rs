@@ -35,10 +35,15 @@ pub async fn get_downloader(
     let scheme = detect_scheme(&url);
 
     match scheme {
-        // HTTP/3: 先尝试 QUIC，失败自动降级到 HTTP/1.1+2
         Protocol::Http => {
-            let h3 = HTTP3Downloader::new(config.clone()).await;
-            Box::new(h3) as Box<dyn Downloader>
+            // 探测服务器是否支持 HTTP/3 (Alt-Svc: h3)
+            // 使用 500ms 超时的 HEAD 请求，失败或无 h3 则回退到 HTTPDownloader
+            if probe_h3_support(&url).await {
+                eprintln!("服务器支持 HTTP/3，使用 QUIC 下载");
+                Box::new(HTTP3Downloader::new(config).await) as Box<dyn Downloader>
+            } else {
+                Box::new(HTTPDownloader::new(config).await) as Box<dyn Downloader>
+            }
         }
         Protocol::Ftp => Box::new(FTPDownloader::new(config).await),
         Protocol::BitTorrent => Box::new(TorrentDownloader::new(config).await),
@@ -48,6 +53,36 @@ pub async fn get_downloader(
             eprintln!("警告: 未知协议 '{}', 回退到 HTTP 下载器", url.split("://").next().unwrap_or("unknown"));
             Box::new(HTTPDownloader::new(config).await)
         }
+    }
+}
+
+/// 发送 HEAD 请求，检查 Alt-Svc 头是否包含 h3
+/// 超时 800ms，失败直接返回 false（不阻塞下载）
+async fn probe_h3_support(url: &str) -> bool {
+    use std::time::Duration;
+
+    // 复用全局 HTTP client（如果可用），否则临时创建
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_millis(800))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+
+    match client.head(url).send().await {
+        Ok(resp) => {
+            // 检查 Alt-Svc 头：h3="..." 或 h3-29="..."
+            resp.headers()
+                .get("alt-svc")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| {
+                    let lower = s.to_lowercase();
+                    lower.contains("h3=") || lower.contains("h3-")
+                })
+                .unwrap_or(false)
+        }
+        Err(_) => false,
     }
 }
 
