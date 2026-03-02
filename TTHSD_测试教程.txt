@@ -1,0 +1,263 @@
+TTHSD Next 协议测试教程
+
+环境准备
+
+1. 编译动态库
+
+bash
+Linux
+cd /path/to/TTHSDNext
+BINDGEN_EXTRA_CLANG_ARGS="-I/usr/lib/gcc/x86_64-linux-gnu/13/include" \
+cargo build --release
+产物: target/release/libtthsd.so
+
+Windows (需要 Visual Studio Build Tools + CMake)
+cargo build --release
+产物: target/release/tthsd.dll
+
+macOS
+cargo build --release
+产物: target/release/libtthsd.dylib
+
+
+2. 安装 Python 接口
+
+将 scripts/TTHSD_interface.py 复制到你的项目目录，与动态库放在同一文件夹。
+
+
+your_project/
+├── tthsd.dll          (Windows)
+├── libtthsd.so        (Linux)
+├── libtthsd.dylib     (macOS)
+└── TTHSD_interface.py
+
+
+---
+
+快速测试（推荐）
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+with TTHSDownloader() as dl:
+    cb = EventLogger()
+    dl_id = dl.start_download(
+        urls=["https://releases.ubuntu.com/24.04/ubuntu-24.04-desktop-amd64.iso"],
+        save_paths=["/tmp/ubuntu.iso"],
+        callback=cb,
+    )
+    print(f"下载器 ID: {dl_id}")
+    input("按 Enter 停止下载...")
+    dl.stop_download(dl_id)
+
+
+---
+
+各协议测试
+
+🌐 HTTP / HTTPS
+
+自动使用 HTTP/3（如服务器支持），否则降级到 HTTP/1.1+2。
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+with TTHSDownloader() as dl:
+    dl.start_download(
+        urls=["https://speed.cloudflare.com/__down?bytes=10000000"],  # Cloudflare 支持 HTTP/3
+        save_paths=["/tmp/cloudflare_10mb.bin"],
+        callback=EventLogger(),
+    )
+    input("等待下载完成，按 Enter 继续...")
+
+
+  注: 验证 HTTP/3 是否生效： 下载 Cloudflare/Google 的 URL 时，控制台会打印 服务器支持 HTTP/3，使用 QUIC 下载。
+
+---
+
+📁 FTP
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+匿名 FTP（公共测试服务器）
+with TTHSDownloader() as dl:
+    dl.start_download(
+        urls=["ftp://ftp.gnu.org/gnu/wget/wget-latest.tar.gz"],
+        save_paths=["/tmp/wget-latest.tar.gz"],
+        callback=EventLogger(),
+    )
+    input("等待完成，按 Enter...")
+
+
+带用户名密码的 FTP：
+python
+urls=["ftp://user:password@ftp.example.com/path/to/file.zip"]
+
+
+---
+
+🧲 BitTorrent / Magnet
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+Ubuntu 官方种子（合法资源）
+with TTHSDownloader() as dl:
+    dl.start_download(
+        urls=["magnet:?xt=urn:btih:b7b0fbab74a85d4ac170662c645982a862826455&dn=ubuntu-24.04.2-desktop-amd64.iso"],
+        save_paths=["/tmp/ubuntu_bt/"],   # BT 下载目录
+        callback=EventLogger(),
+    )
+    input("等待 DHT 连接（可能需要几分钟），按 Enter 停止...")
+
+
+  注: 注意： BT 下载需要 DHT 网络预热，通常 30-60 秒后才开始接收数据。
+
+使用 .torrent 文件 URL：
+python
+urls=["https://releases.ubuntu.com/24.04/ubuntu-24.04.2-desktop-amd64.iso.torrent"]
+
+
+---
+
+🔗 ED2K
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+ed2k:// 链接格式: ed2k://|file|<文件名>|<大小>|<Hash>|/
+with TTHSDownloader() as dl:
+    dl.start_download(
+        urls=["ed2k://|file|ubuntu-24.04-desktop-amd64.iso|2110668800|d9e3c9d5c9f7e4ae4512b4cdf5512345|/"],
+        save_paths=["/tmp/ubuntu_ed2k.iso"],
+        callback=EventLogger(),
+    )
+    input("等待完成，按 Enter...")
+
+
+  注: 工作原理： ED2K 链接通过 https://ed2k.lyoko.io/hash/<hash> 网关转为 HTTP 下载，无需安装 eMule 客户端。
+
+---
+
+📋 Metalink
+
+python
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+Metalink 4.0 (.meta4) — 包含多个镜像 URL
+with TTHSDownloader() as dl:
+    dl.start_download(
+        urls=["https://www.mirrorservice.org/sites/download.eclipse.org/eclipseMirror/technology/epp/downloads/release/2024-09/R/eclipse-java-2024-09-R-linux-gtk-x86_64.tar.gz.meta4"],
+        save_paths=["/tmp/eclipse.tar.gz"],
+        callback=EventLogger(),
+    )
+    input("等待完成，按 Enter...")
+
+
+  注: 工作原理： 下载器先获取 .meta4 XML 文件，解析出所有镜像 URL，选择优先级最高的镜像下载。
+
+---
+
+一键综合测试脚本
+
+python
+#!/usr/bin/env python3
+"""TTHSD 协议综合测试"""
+
+import time
+import threading
+from TTHSD_interface import TTHSDownloader, EventLogger
+
+TESTS = [
+    {
+        "name": "HTTP (Cloudflare, 测试 HTTP/3 探测)",
+        "url": "https://speed.cloudflare.com/__down?bytes=1000000",
+        "save": "/tmp/test_http.bin",
+    },
+    {
+        "name": "FTP (GNU 公共服务器)",
+        "url": "ftp://ftp.gnu.org/gnu/hello/hello-2.12.1.tar.gz",
+        "save": "/tmp/test_ftp.tar.gz",
+    },
+    {
+        "name": "Magnet (Ubuntu BT)",
+        "url": "magnet:?xt=urn:btih:b7b0fbab74a85d4ac170662c645982a862826455",
+        "save": "/tmp/test_bt/",
+        "timeout": 60,
+    },
+]
+
+results = {}
+
+def run_test(name, url, save, timeout=30):
+    done = threading.Event()
+    success = [False]
+
+    def cb(event, msg):
+        t = event.get("Type", "")
+        if t == "end":
+            success[0] = True
+            done.set()
+        elif t == "err":
+            done.set()
+
+    try:
+        with TTHSDownloader() as dl:
+            dl_id = dl.start_download(urls=[url], save_paths=[save], callback=cb)
+            done.wait(timeout=timeout)
+            if not success[0]:
+                dl.stop_download(dl_id)
+    except Exception as e:
+        print(f"  ❌ 异常: {e}")
+        return False
+
+    return success[0]
+
+for t in TESTS:
+    print(f"\n{'='*50}")
+    print(f"测试: {t['name']}")
+    print(f"URL:  {t['url'][:60]}...")
+    ok = run_test(t["name"], t["url"], t["save"], t.get("timeout", 30))
+    results[t["name"]] = ok
+    print(f"结果: {'✅ 通过' if ok else '❌ 失败'}")
+
+print(f"\n{'='*50}")
+print("综合测试报告:")
+for name, ok in results.items():
+    print(f"  {'✅' if ok else '❌'} {name}")
+
+
+---
+
+控制操作
+
+python
+with TTHSDownloader() as dl:
+    dl_id = dl.start_download(urls=[url], save_paths=[save], callback=cb)
+
+    time.sleep(5)
+    dl.pause_download(dl_id)    # 暂停
+    print("已暂停")
+
+    time.sleep(3)
+    dl.resume_download(dl_id)   # 恢复
+    print("已恢复")
+
+    time.sleep(2)
+    dl.stop_download(dl_id)     # 停止（不可恢复）
+    print("已停止")
+
+
+---
+
+常见问题
+
+| 现象 | 原因 | 解决 |
+|:---|:---|:---|
+| 动态库文件不存在 | 未编译或路径错误 | 先 cargo build --release |
+| FTP 下载失败 | 服务器拒绝匿名登录 | 在 URL 中带上 user:pass@ |
+| BT 长时间无进度 | DHT 网络冷启动 | 等待 1-3 分钟，Peer 会陆续连接 |
+| HTTP/3 未触发 | 服务器不支持 QUIC | 正常，自动降级到 HTTP/2 |
+| ED2K 下载失败 | 网关服务暂时不可用 | 检查 ed2k.lyoko.io 连通性 |
+| Windows 编译失败 | 缺少 BoringSSL 依赖 | 安装 VS Build Tools 2022 + CMake |

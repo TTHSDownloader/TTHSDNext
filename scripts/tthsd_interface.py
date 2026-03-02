@@ -1,5 +1,6 @@
+# pylint: disable=invalid-name
 """
-TTHSD_interface.py - TT 高速下载器 Python 接口封装
+tthsd_interface.py - TT 高速下载器 Python 接口封装
 
 兼容 TTHSD Next (Rust 版本) 与 TTHSD Golang 版本的动态库。
 自动根据操作系统选择动态库文件名：
@@ -16,24 +17,25 @@ TTHSD_interface.py - TT 高速下载器 Python 接口封装
 import ctypes
 import json
 import logging
-import os
 import platform
 import queue
 import sys
-import threading
-import weakref
+import types
+import uuid
 from pathlib import Path
 from collections.abc import Callable
+from typing import Any
 
 # ------------------------------------------------------------------
 # 内部日志器
 # ------------------------------------------------------------------
 
-_log_queue: queue.Queue = queue.Queue()
+_log_queue: queue.Queue[str] = queue.Queue()
 _logger = logging.getLogger("TTHSD_interface")
 if not _logger.handlers:
     _handler = logging.StreamHandler(sys.stdout)
-    _handler.setFormatter(logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s"))
+    _formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+    _handler.setFormatter(_formatter)
     _logger.addHandler(_handler)
     _logger.setLevel(logging.INFO)
 
@@ -43,7 +45,7 @@ try:
     _file_handler = logging.FileHandler(str(_log_file_path), mode="a", encoding="utf-8")
     _file_handler.setFormatter(logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s"))
     _logger.addHandler(_file_handler)
-except Exception:
+except OSError:
     pass  # 忽略日志文件写入失败
 
 
@@ -54,16 +56,17 @@ except Exception:
 
 _CALLBACK_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p)
 
+# Pylance/MyPy 兼容：不能暴漏 _CFuncPtr 给它们，因为它是类型检查器未知的 ctypes 内部类
+_CCallbackType = Any
 
 def _default_dll_name() -> str:
     """根据当前操作系统返回默认动态库文件名。"""
     system = platform.system()
     if system == "Windows":
         return "tthsd.dll"
-    elif system == "Darwin":
+    if system == "Darwin":
         return "tthsd.dylib"
-    else:
-        return "tthsd.so"
+    return "tthsd.so"
 
 
 def _build_tasks_json(
@@ -88,10 +91,7 @@ def _build_tasks_json(
         raise ValueError(
             f"urls 与 save_paths 长度不一致: {len(urls)} vs {len(save_paths)}"
         )
-
-    import uuid
-
-    tasks = []
+    tasks: list[dict[str, str]] = []
     for i, (url, save_path) in enumerate(zip(urls, save_paths)):
         show_name = (show_names[i] if show_names and i < len(show_names)
                      else Path(url.split("?")[0]).name or f"task_{i}")
@@ -145,17 +145,17 @@ class TTHSDownloader:
         dll_path = Path(dll_path).resolve()
         if not dll_path.exists():
             raise FileNotFoundError(
-                f"动态库文件不存在: {dll_path}\n"
+                f"动态库文件不存在 {dll_path}\n"
                 "请确保 TTHSD.so (Linux) / TTHSD.dll (Windows) / TTHSD.dylib (macOS) "
                 "位于执行目录，或通过 dll_path 参数显式指定路径。"
             )
 
-        _logger.info(f"加载动态库: {dll_path}")
+        _logger.info("加载动态库: %s", dll_path)
         self._dll = ctypes.CDLL(str(dll_path))
         self._setup_dll_signatures()
 
         # 保存回调函数的 C 可调用对象，防止被 GC 回收导致崩溃
-        self._callback_refs: dict[int, ctypes.CFUNCTYPE] = {} # pyright: ignore[reportGeneralTypeIssues]
+        self._callback_refs: dict[int, Any] = {}
 
     # ------------------------------------------------------------------
     # DLL 函数签名配置
@@ -220,8 +220,8 @@ class TTHSDownloader:
 
     def _make_c_callback(
         self,
-        user_callback: Callable[[dict, dict], None],
-    ) -> ctypes.CFUNCTYPE: # pyright: ignore[reportGeneralTypeIssues]
+        user_callback: Callable[[dict[str, Any], dict[str, Any]], None],
+    ) -> _CCallbackType:
         """
         将 Python 回调函数包装为 C 可调用对象。
 
@@ -230,20 +230,20 @@ class TTHSDownloader:
         """
         def _inner(event_ptr: ctypes.c_char_p, msg_ptr: ctypes.c_char_p):
             try:
-                event_str = event_ptr.value.decode("utf-8") if event_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
-                msg_str = msg_ptr.value.decode("utf-8") if msg_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
-                event_dict = json.loads(event_str)
-                msg_dict = json.loads(msg_str)
-                user_callback(event_dict, msg_dict)
-            except Exception as exc:
-                _logger.error(f"回调函数异常 (已捕获，不影响下载): {exc}", exc_info=True)
+                # pyright: ignore[reportOptionalMemberAccess]
+                evt_s = event_ptr.value.decode("utf-8") if event_ptr else "{}"
+                # pyright: ignore[reportOptionalMemberAccess]
+                msg_s = msg_ptr.value.decode("utf-8") if msg_ptr else "{}"
+                user_callback(json.loads(evt_s), json.loads(msg_s))
+            except (json.JSONDecodeError, TypeError, ValueError) as exc:
+                _logger.error("回调: %s", exc, exc_info=True)
 
-        c_cb = _CALLBACK_TYPE(_inner)
-        # 用 id(user_callback) 作为键，避免同一 callback 重复保存多份引用
+        c_cb: _CCallbackType = _CALLBACK_TYPE(_inner)
+        # 用 id(c_cb) 作为键保存引用，防止 GC 回收
         self._callback_refs[id(c_cb)] = c_cb
         return c_cb
 
-    def _release_c_callback(self, c_cb: ctypes.CFUNCTYPE): # pyright: ignore[reportGeneralTypeIssues]
+    def _release_c_callback(self, c_cb: _CCallbackType) -> None:
         """释放已不再需要的 C 回调引用。"""
         key = id(c_cb)
         self._callback_refs.pop(key, None)
@@ -252,13 +252,13 @@ class TTHSDownloader:
     # 公开 API
     # ------------------------------------------------------------------
 
-    def get_downloader(
+    def get_downloader(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         urls: list[str],
         save_paths: list[str],
         thread_count: int = 64,
         chunk_size_mb: int = 10,
-        callback: Callable[[dict, dict], None] | None = None,
+        callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
         use_callback_url: bool = False,
         user_agent: str | None = None,
         remote_callback_url: str | None = None,
@@ -297,7 +297,7 @@ class TTHSDownloader:
         ua_bytes = user_agent.encode("utf-8") if user_agent else None
         rc_url_bytes = remote_callback_url.encode("utf-8") if remote_callback_url else None
 
-        use_socket_val = None
+        use_socket_ptr: ctypes.c_void_p | None = None
         if use_socket is not None:
             _use_socket_c = ctypes.c_bool(use_socket)
             use_socket_ptr = ctypes.cast(ctypes.byref(_use_socket_c), ctypes.c_void_p)
@@ -319,17 +319,17 @@ class TTHSDownloader:
         if dl_id == -1:
             _logger.error("getDownloader 返回 -1，创建下载器实例失败")
         else:
-            _logger.info(f"下载器已创建 (ID={dl_id})，共 {task_count} 个任务")
+            _logger.info("下载器已创建 (ID=%s)，共 %s 个任务", dl_id, task_count)
 
         return int(dl_id)
 
-    def start_download(
+    def start_download(  # pylint: disable=too-many-arguments,too-many-locals
         self,
         urls: list[str],
         save_paths: list[str],
         thread_count: int = 64,
         chunk_size_mb: int = 10,
-        callback: Callable[[dict, dict], None] | None = None,
+        callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
         use_callback_url: bool = False,
         user_agent: str | None = None,
         remote_callback_url: str | None = None,
@@ -398,9 +398,10 @@ class TTHSDownloader:
         if dl_id == -1:
             _logger.error("startDownload 返回 -1，创建/启动下载器失败")
         else:
+            mode_str = '并行' if is_multiple else '顺序'
             _logger.info(
-                f"下载器已创建并启动 (ID={dl_id})，共 {task_count} 个任务，"
-                f"模式={'并行' if is_multiple else '顺序'}"
+                "下载器已创建并启动 (ID=%s)，共 %s 个任务，模式=%s",
+                dl_id, task_count, mode_str
             )
 
         return int(dl_id)
@@ -417,7 +418,7 @@ class TTHSDownloader:
         """
         ret = self._dll.start_download_id(ctypes.c_int(downloader_id))
         if ret != 0:
-            _logger.warning(f"start_download_id(id={downloader_id}) 返回 {ret}（失败）")
+            _logger.warning("start_download_id(id=%s) 返回 %s（失败）", downloader_id, ret)
         return ret == 0
 
     def start_multiple_downloads_by_id(self, downloader_id: int) -> bool:
@@ -432,7 +433,9 @@ class TTHSDownloader:
         """
         ret = self._dll.start_multiple_downloads_id(ctypes.c_int(downloader_id))
         if ret != 0:
-            _logger.warning(f"start_multiple_downloads_id(id={downloader_id}) 返回 {ret}（失败）")
+            _logger.warning(
+                "start_multiple_downloads_id(id=%s) 返回 %s（失败）", downloader_id, ret
+            )
         return ret == 0
 
     def pause_download(self, downloader_id: int) -> bool:
@@ -450,7 +453,7 @@ class TTHSDownloader:
         """
         ret = self._dll.pause_download(ctypes.c_int(downloader_id))
         if ret != 0:
-            _logger.warning(f"pause_download(id={downloader_id}) 返回 {ret}（失败，ID 可能不存在）")
+            _logger.warning("pause_download(id=%s) 返回 %s（失败，ID 不存在）", downloader_id, ret)
         return ret == 0
 
     def resume_download(self, downloader_id: int) -> bool:
@@ -467,7 +470,7 @@ class TTHSDownloader:
         """
         ret = self._dll.resume_download(ctypes.c_int(downloader_id))
         if ret != 0:
-            _logger.warning(f"resume_download(id={downloader_id}) 返回 {ret}（失败）")
+            _logger.warning("resume_download(id=%s) 返回 %s（失败）", downloader_id, ret)
         return ret == 0
 
     def stop_download(self, downloader_id: int) -> bool:
@@ -482,7 +485,7 @@ class TTHSDownloader:
         """
         ret = self._dll.stop_download(ctypes.c_int(downloader_id))
         if ret != 0:
-            _logger.warning(f"stop_download(id={downloader_id}) 返回 {ret}（失败）")
+            _logger.warning("stop_download(id=%s) 返回 %s（失败）", downloader_id, ret)
         return ret == 0
 
     def close(self):
@@ -500,14 +503,19 @@ class TTHSDownloader:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> bool:
         self.close()
         return False
 
     def __del__(self):
         try:
             self._callback_refs.clear()
-        except Exception:
+        except AttributeError:
             pass
 
 
@@ -525,7 +533,10 @@ class EventLogger:
         dl.start_download(urls=[...], save_paths=[...], callback=cb)
     """
 
-    def __call__(self, event: dict, msg: dict) -> None:
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    def __call__(self, event: dict[str, Any], msg: dict[str, Any]) -> None:
         event_type = event.get("Type", "?")
         show_name = event.get("ShowName", "")
         eid = event.get("ID", "")
@@ -572,13 +583,13 @@ class EventLogger:
 # 快捷函数: 一行启动下载
 # ------------------------------------------------------------------
 
-def quick_download(
+def quick_download(  # pylint: disable=too-many-arguments
     urls: list[str],
     save_paths: list[str],
     dll_path: str | Path | None = None,
     thread_count: int = 64,
     chunk_size_mb: int = 10,
-    callback: Callable[[dict, dict], None] | None = None,
+    callback: Callable[[dict[str, Any], dict[str, Any]], None] | None = None,
     is_multiple: bool = False,
 ) -> int:
     """
@@ -602,3 +613,4 @@ def quick_download(
             callback=callback,
             is_multiple=is_multiple,
         )
+    return -1
