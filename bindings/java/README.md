@@ -1,100 +1,147 @@
-# TTHSD Java/Kotlin 封装库
+# TTHSD Java / Kotlin 封装库
 
-> 基于 JNA（桌面端）和 JNI（Android 端）调用 TTHSD 高速下载器，可用于 Windows / Linux / macOS 桌面程序，以及 Android 应用、Minecraft Mod/Plugin、第三方启动器等场景。
+> 基于 JNA（桌面端）和 JNI（Android 端）调用 TTHSD 高速下载器。
+> 适用于 Windows / Linux / macOS 桌面程序、Android 应用、Minecraft Mod/Plugin、第三方启动器等场景。
 
-## 安装
+---
 
-将以下依赖添加到你的 `build.gradle.kts`（或上游 Maven）：
+## 📁 文件结构
 
-```kotlin
-// 如果通过本地 jar 引用：
-implementation(files("libs/tthsd-0.5.1.jar"))
-
-// 若发布到 Maven Central：
-// implementation("com.tthsd:tthsd:0.5.1")
-
-// 必需依赖（JNA + Gson）
-implementation("net.java.dev.jna:jna:5.15.0")
-implementation("com.google.code.gson:gson:2.11.0")
+```
+src/main/kotlin/com/tthsd/
+├── TTHSDownloader.kt         # 高层封装类（用户直接使用）
+├── TTHSDLibraryJNA.kt        # JNA 接口声明（桌面端）
+├── TTHSDLibraryJNI.kt        # JNI 接口声明（Android 端）
+├── TTHSDownloaderAndroid.kt  # Android 专用封装
+└── NativeLibraryLoader.kt    # 动态库自动加载/提取工具
 ```
 
-## 桌面端（Windows / Linux / macOS）用法
+---
+
+## 架构概览
+
+```
+┌──────────────────┐
+│ TTHSDownloader   │  ← 用户使用的高层 API
+├──────────────────┤
+│ JNA (桌面端)     │  TTHSDLibraryJNA.kt
+│ JNI (Android)    │  TTHSDLibraryJNI.kt
+├──────────────────┤
+│ tthsd.dll/so     │  ← Rust 编译的动态库
+└──────────────────┘
+```
+
+- **桌面端**：通过 JNA 接口加载 `tthsd.dll` / `libtthsd.so` / `libtthsd.dylib`
+- **Android**：通过 JNI 接口调用 `libtthsd.so`（对应 Rust 的 `android_export.rs`）
+
+---
+
+## 快速开始 (Kotlin)
 
 ```kotlin
-import com.tthsd.TTHSDownloader
-import com.tthsd.DownloadEvent
+val dl = TTHSDownloader()  // 自动从 JAR 提取或搜索动态库
 
-// TTHSDownloader 实现了 AutoCloseable，推荐用 use {}
-TTHSDownloader().use { dl ->
-    val id = dl.startDownload(
-        urls = listOf("https://example.com/a.zip", "https://example.com/b.zip"),
-        savePaths = listOf("/tmp/a.zip", "/tmp/b.zip"),
-        threadCount = 64,
-        chunkSizeMB = 10,
-        callback = { event: DownloadEvent, data: Map<String, Any?> ->
-            when (event.Type) {
-                "update"  -> println("进度: ${data["Downloaded"]}/${data["Total"]}")
-                "end"     -> println("✅ 全部完成")
-                "err"     -> System.err.println("❌ 错误: ${data["Error"]}")
+val id = dl.startDownload(
+    urls = listOf("https://example.com/a.zip"),
+    savePaths = listOf("/tmp/a.zip"),
+    threadCount = 32,
+    callback = { event, data ->
+        when (event.Type) {
+            "update" -> {
+                val pct = (data["Downloaded"] as Double) / (data["Total"] as Double) * 100
+                print("\r进度: ${"%.1f".format(pct)}%")
             }
+            "endOne" -> println("\n完成: ${event.ShowName}")
+            "err" -> println("\n错误: ${data["Error"]}")
         }
-    )
-    // id 可用于暂停/恢复/停止
-    // dl.pauseDownload(id)
-    // dl.resumeDownload(id)
-    // dl.stopDownload(id)
-}
-```
-
-### 两步走：先创建，后启动
-
-```kotlin
-val dl = TTHSDownloader()
-val id = dl.getDownloader(urls, savePaths)   // 创建但不启动
-dl.startDownloadById(id)                     // 顺序启动
-// 或
-dl.startMultipleDownloadsById(id)            // 并行启动
-```
-
-### 动态库查找规则
-1. `TTHSD_LIB_PATH` 环境变量
-2. fat-jar 内嵌资源（`/native/<os>/<arch>/TTHSD.*`），自动提取到 `java.io.tmpdir/tthsd_native/`
-3. `user.dir`（工作目录）
-4. JAR 所在目录
-
-## Android 端用法
-
-Android 端使用 JNI 接口，通过 `soLibs/` 中的 `.so` 文件。由于 Android JNI 不支持 C 函数指针回调，进度反馈需通过 WebSocket/Socket 实现。
-
-```kotlin
-import com.tthsd.TTHSDownloaderAndroid
-
-// 在 Application.onCreate() 或首次使用前调用
-// （实际加载由 TTHSDownloaderAndroid 初始化块自动完成）
-
-TTHSDownloaderAndroid().use { dl ->
-    val id = dl.startDownload(
-        urls = listOf("https://example.com/a.zip"),
-        savePaths = listOf("/sdcard/Download/a.zip"),
-        callbackUrl = "ws://192.168.1.100:8080",  // 可选：WebSocket 进度回调
-        useSocket = false                           // false=WebSocket, true=TCP Socket
-    )
-}
-```
-
-## 在 Minecraft Mod / Plugin 中集成
-
-由于本 jar 不依赖任何 MC 特有 API，可直接在 Mod/Plugin 中作为普通 Kotlin/Java 库引用：
-
-```kotlin
-// Fabric Mod 示例（forge/bukkit 同理）
-class MyMod : ModInitializer {
-    private val downloader = TTHSDownloader()
-
-    override fun onInitialize() {
-        // 正常调用 downloader.startDownload(...) 即可
     }
+)
+
+println("下载 ID: $id")
+```
+
+---
+
+## API 参考
+
+### `TTHSDownloader`
+
+| 方法 | 返回值 | 说明 |
+|------|--------|------|
+| `startDownload(urls, savePaths, ...)` | `Int` | 创建并启动下载，返回下载器 ID |
+| `getDownloader(urls, savePaths, ...)` | `Int` | 创建下载器（不启动） |
+| `startDownloadById(id)` | `Boolean` | 顺序启动 |
+| `startMultipleDownloadsById(id)` | `Boolean` | 并行启动 |
+| `pauseDownload(id)` | `Boolean` | 暂停 |
+| `resumeDownload(id)` | `Boolean` | 恢复 |
+| `stopDownload(id)` | `Boolean` | 停止并销毁 |
+| `close()` | — | 释放资源（`AutoCloseable`） |
+
+### `startDownload` 完整参数
+
+```kotlin
+fun startDownload(
+    urls: List<String>,
+    savePaths: List<String>,
+    threadCount: Int = 64,          // 下载线程数
+    chunkSizeMB: Int = 10,          // 分块大小 MB
+    callback: DownloadCallback?,    // 进度回调
+    useCallbackUrl: Boolean = false,
+    userAgent: String? = null,
+    remoteCallbackUrl: String? = null,
+    useSocket: Boolean? = null,
+    isMultiple: Boolean? = null,    // true=并行, false=顺序
+    showNames: List<String>? = null,
+    ids: List<String>? = null
+): Int
+```
+
+### 回调类型
+
+```kotlin
+data class DownloadEvent(val Type: String, val Name: String?, val ShowName: String?, val ID: String?)
+
+typealias DownloadCallback = (event: DownloadEvent, data: Map<String, Any?>) -> Unit
+```
+
+---
+
+## Gradle 依赖
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("com.google.code.gson:gson:2.10+")
+    implementation("net.java.dev.jna:jna:5.13+")
 }
 ```
 
-将 `tthsd-X.X.X.jar` 放入 Fabric 的 `mods/` 目录或作为 lib 打包进 Mod 的 JAR 均可正常工作。
+---
+
+## Android 使用
+
+Android 端使用 JNI 而非 JNA：
+
+```kotlin
+// Application.onCreate() 中初始化
+TTHSDLibraryJNI.load()
+
+// 使用 JNI 接口
+val id = TTHSDLibraryJNI.startDownload(
+    tasksJson,
+    threadCount = 16,
+    chunkSizeMB = 10,
+    useCallbackUrl = true,
+    callbackUrl = "ws://localhost:8080",
+    useSocket = false,
+    isMultiple = false
+)
+```
+
+> **注意**：Android 端通过远程回调 URL（WebSocket/Socket）接收事件，不支持函数指针回调。
+
+---
+
+## GC 安全
+
+封装类内部维护 `callbackRefs: MutableMap<Int, ProgressCallback>`，持有所有 JNA 回调引用。在 `stopDownload()` 或 `close()` 时释放。**务必在下载完成后调用 `stopDownload()` 或 `close()`**。
