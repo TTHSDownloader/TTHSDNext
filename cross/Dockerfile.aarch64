@@ -1,0 +1,19 @@
+FROM ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main
+
+# boring-sys2 (BoringSSL) 的 CMake 构建需要:
+# 1. cmake (构建 BoringSSL)
+# 2. g++-aarch64-linux-gnu (C++ 交叉编译器)
+# 没有这些，CMake 会使用宿主 x86_64 编译器，导致链接失败
+RUN apt-get update && apt-get install -y \
+    cmake \
+    g++-aarch64-linux-gnu \
+    && rm -rf /var/lib/apt/lists/*
+
+# 设置环境变量让 boring-sys2 的 cmake 使用正确的编译器
+ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
+    CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++ \
+    AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar \
+    CMAKE_TOOLCHAIN_FILE=/cmake/aarch64-linux-gnu.cmake
+
+# 将 cmake toolchain 文件复制到容器中
+COPY cmake/aarch64-linux-gnu.cmake /cmake/aarch64-linux-gnu.cmake

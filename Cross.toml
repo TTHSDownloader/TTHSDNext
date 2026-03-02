@@ -1,15 +1,6 @@
 # Cross.toml - 交叉编译配置
-# 解决 boring-sys2 (BoringSSL) 在 cross 容器内
-# CMake 使用错误架构编译器导致链接失败的问题
-#
-# 根因: boring-sys2 的 CMake 构建检测到交叉编译 (host != target)，
-# 但容器中 CC/CXX 指向宿主 x86_64 编译器。
-# 设置 CC/CXX 指向 aarch64 交叉编译器即可修复。
+# 解决 boring-sys2 (BoringSSL) 在 cross 容器内使用错误架构编译器的问题
 
-[target.aarch64-unknown-linux-gnu.env]
-passthrough = [
-    "CC_aarch64_unknown_linux_gnu",
-    "CXX_aarch64_unknown_linux_gnu",
-    "AR_aarch64_unknown_linux_gnu",
-    "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER",
-]
+[target.aarch64-unknown-linux-gnu]
+# 使用自定义 Dockerfile 确保 cmake 和 g++ 可用
+dockerfile = "cross/Dockerfile.aarch64"

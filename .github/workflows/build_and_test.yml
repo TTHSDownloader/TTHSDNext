@@ -84,10 +84,6 @@ jobs:
 
       - name: 🏗️ 编译 (交叉编译)
         if: matrix.cross
-        env:
-          # boring-sys2 (BoringSSL) 的 CMake 构建需要知道交叉编译器路径
-          # 否则会使用宿主 x86_64 编译器导致链接失败 (EM: 62 错误)
-          CROSS_CONTAINER_OPTS: "--env CC=aarch64-linux-gnu-gcc --env CXX=aarch64-linux-gnu-g++ --env AR=aarch64-linux-gnu-ar"
         run: cross build --release --target ${{ matrix.target }}
 
       - name: 📋 重命名产物
