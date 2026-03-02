@@ -23,6 +23,7 @@ target/
 Cargo.lock
 .*/
 .*
+*.lock
 
 
 !.github/
@@ -57,3 +58,5 @@ logs/
 
 *.7z
 !TTHSD_Release.7z
+*.txt
+problem*

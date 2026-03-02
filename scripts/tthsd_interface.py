@@ -230,10 +230,8 @@ class TTHSDownloader:
         """
         def _inner(event_ptr: ctypes.c_char_p, msg_ptr: ctypes.c_char_p):
             try:
-                # pyright: ignore[reportOptionalMemberAccess]
-                evt_s = event_ptr.value.decode("utf-8") if event_ptr else "{}"
-                # pyright: ignore[reportOptionalMemberAccess]
-                msg_s = msg_ptr.value.decode("utf-8") if msg_ptr else "{}"
+                evt_s = event_ptr.value.decode("utf-8") if event_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
+                msg_s = msg_ptr.value.decode("utf-8") if msg_ptr else "{}" # pyright: ignore[reportOptionalMemberAccess]
                 user_callback(json.loads(evt_s), json.loads(msg_s))
             except (json.JSONDecodeError, TypeError, ValueError) as exc:
                 _logger.error("回调: %s", exc, exc_info=True)
