@@ -8,6 +8,7 @@ use super::torrent_downloader::TorrentDownloader;
 use super::metalink_downloader::MetalinkDownloader;
 use super::ed2k_downloader::ED2KDownloader;
 use super::http3_downloader::HTTP3Downloader;
+use super::sftp_downloader::SFTPDownloader;
 
 /// 下载器工厂函数
 ///
@@ -49,6 +50,7 @@ pub async fn get_downloader(
         Protocol::BitTorrent => Box::new(TorrentDownloader::new(config).await),
         Protocol::Ed2k => Box::new(ED2KDownloader::new(config).await),
         Protocol::Metalink => Box::new(MetalinkDownloader::new(config).await),
+        Protocol::Sftp => Box::new(SFTPDownloader::new(config).await),
         _ => {
             eprintln!("警告: 未知协议 '{}', 回退到 HTTP 下载器", url.split("://").next().unwrap_or("unknown"));
             Box::new(HTTPDownloader::new(config).await)

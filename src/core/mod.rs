@@ -6,6 +6,7 @@ pub mod torrent_downloader;
 pub mod metalink_downloader;
 pub mod ed2k_downloader;
 pub mod http3_downloader;
+pub mod sftp_downloader;
 pub mod socket_client;
 pub mod websocket_client;
 pub mod send_message;

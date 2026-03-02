@@ -32,6 +32,8 @@ rustls = { version = "0.23", default-features = false, features = ["ring"] }
 webpki-roots = "0.26"
 bytes = "1"
 http = "1"
+russh = "0.46"
+russh-sftp = "2.0"
 
 [features]
 default = []
