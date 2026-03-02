@@ -1,6 +1,6 @@
 //! Rust 绑定 Crate 使用示例
 //!
-//! 运行方式（先将 TTHSD.so 放到工作目录）:
+//! 运行方式（先将 libtthsd.so 放到工作目录）:
 //! ```bash
 //! cargo run --example basic_download
 //! ```
@@ -9,7 +9,7 @@ use tthsd::{TTHSDownloader, DownloadOptions};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. 加载动态库（None = 在当前目录搜索 TTHSD.so/.dll/.dylib）
+    // 1. 加载动态库（None = 在当前目录搜索 libtthsd.so/.dll/.dylib）
     let dl = TTHSDownloader::load(None)?;
 
     // 2. 启动下载，获取事件接收 channel

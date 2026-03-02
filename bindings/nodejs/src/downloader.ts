@@ -73,7 +73,7 @@ function buildTasksJson(
  *
  * 也可以在构造函数里传入动态库的绝对路径:
  * ```ts
- * const dl = new TTHSDownloader({ dllPath: "/opt/app/TTHSD.so" });
+ * const dl = new TTHSDownloader({ dllPath: "/opt/app/libtthsd.so" });
  * ```
  */
 export class TTHSDownloader extends EventEmitter {

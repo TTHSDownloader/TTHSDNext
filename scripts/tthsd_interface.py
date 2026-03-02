@@ -11,7 +11,7 @@ tthsd_interface.py - TT 高速下载器 Python 接口封装
 依赖: Python 3.11+, 标准库 (ctypes, json, threading, queue, weakref)
 
 作者: 23XR Studio
-文档: https://docss.sxxyrry.qzz.io/TTHSD/
+文档: https://p.ceroxe.fun:58000/TTHSD/
 """
 
 import ctypes
@@ -146,7 +146,7 @@ class TTHSDownloader:
         if not dll_path.exists():
             raise FileNotFoundError(
                 f"动态库文件不存在 {dll_path}\n"
-                "请确保 TTHSD.so (Linux) / TTHSD.dll (Windows) / TTHSD.dylib (macOS) "
+                "请确保 libtthsd.so (Linux) / tthsd.dll (Windows) / libtthsd.dylib (macOS) "
                 "位于执行目录，或通过 dll_path 参数显式指定路径。"
             )
 

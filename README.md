@@ -11,11 +11,11 @@
 **TTHSD 核心**（TT High Speed Downloader Core）是一个高性能、跨平台、多语言可调用的下载引擎内核，可为外部项目提供强大的下载能力支持，使开发者能够在自己的应用中轻松集成专业级的文件下载功能。该项目使用 **Rust** 语言开发，编译为 DLL/SO/DYLIB 动态库，供全语言原生调用。
 
 > [!TIP]
-> 本项目是 **TTHSD Next**（Rust 版本），它是 [TTHSD Golang](https://github.com/sxxyrry/TTHighSpeedDownloader) 的 Rust 完全重写版本。
+> 本项目是 **TTHSD Next**（Rust 版本），它是 [TTHSD Golang](https://github.com/TTHSDownloader/TTHighSpeedDownloader) 的 Rust 完全重写版本。
 > 
 > TTHSD Next 的对外调用方式与 TTHSD Golang 相同，并且拥有原生 C/C++ FFI 及 JNI 接口包装。
 > 
-> **注**：[TTHSD Golang](https://github.com/sxxyrry/TTHighSpeedDownloader) 已经停止开发，强烈建议所有新项目迁移至性能更优的 TTHSD Next。
+> **注**：[TTHSD Golang](https://github.com/TTHSDownloader/TTHighSpeedDownloader) 已经停止开发，强烈建议所有新项目迁移至性能更优的 TTHSD Next。
 
 ## ✨ 功能特性
 
@@ -33,10 +33,11 @@
 
 ## 🌐 支持的下载协议
 
-由于内置了灵活的协议路由工厂，TTHSD Next 原生支持多达 6 种下载协议环境：
+由于内置了灵活的协议路由工厂，TTHSD Next 原生支持多达 **7 种**下载协议环境：
 - **HTTP / HTTPS**: 支持动态工作量窃取的自适应并发分片，并附带针对反爬机制的 TLS 证书指纹伪装能力。
 - **HTTP/3 (QUIC)**: 针对支持 `Alt-Svc: h3` 头的服务器，进行无缝探查并使用 QUIC UDP 提速。
 - **FTP / FTPS**: 提供全功能的带密码登录或匿名服务器文件访问下载能力。
+- **SFTP (SSH)**: 基于 SSH 隧道的安全文件传输，支持密码和密钥认证，通过 `russh` 实现纯 Rust 异步连接。
 - **BitTorrent / Magnet**: 利用纯 Rust 的 DHT 网络节点构建实现了完整的种子文件解析和磁力链接解析。
 - **ED2K (eMule)**: 无需臃肿的电驴客户端，通过底层 HTTP 代理转换技术直接拉取资源。
 - **Metalink 4.0 (.meta4)**: XML 镜像元数据深度解析，智能筛选出当前网络最佳镜像优先级后极速下载。

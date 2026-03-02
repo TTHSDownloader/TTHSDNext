@@ -9,16 +9,16 @@
   #define TTHSD_OPEN_LIB(path)  LoadLibraryA(path)
   #define TTHSD_GET_SYM(h, sym) GetProcAddress((HMODULE)(h), sym)
   #define TTHSD_CLOSE_LIB(h)    FreeLibrary((HMODULE)(h))
-  #define TTHSD_DEFAULT_LIB     "TTHSD.dll"
+  #define TTHSD_DEFAULT_LIB     "tthsd.dll"
 #else
   #include <dlfcn.h>
   #define TTHSD_OPEN_LIB(path)  dlopen(path, RTLD_LAZY)
   #define TTHSD_GET_SYM(h, sym) dlsym(h, sym)
   #define TTHSD_CLOSE_LIB(h)    dlclose(h)
   #ifdef __APPLE__
-    #define TTHSD_DEFAULT_LIB   "TTHSD.dylib"
+    #define TTHSD_DEFAULT_LIB   "libtthsd.dylib"
   #else
-    #define TTHSD_DEFAULT_LIB   "TTHSD.so"
+    #define TTHSD_DEFAULT_LIB   "libtthsd.so"
   #endif
 #endif
 

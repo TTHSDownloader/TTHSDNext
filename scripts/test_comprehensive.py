@@ -10,7 +10,7 @@ TTHSD Next 综合功能测试脚本
 
 需要的环境:
     - 本地 HTTP 测试服务器运行在 127.0.0.1:18080
-    - TTHSD.so 动态库在 /home/amd/TTSD/ 下
+    - libtthsd.so 动态库在 /home/amd/TTSD/ 下
     - TTHSD_interface.py 在同一目录
 """
 
@@ -38,7 +38,7 @@ PUBLIC_TEST_URLS = {
     "5mb": "http://ipv4.download.thinkbroadband.com/5MB.zip",
     "10mb": "http://ipv4.download.thinkbroadband.com/10MB.zip",
 }
-DLL_PATH = Path("/home/amd/TTSD/TTHSD.so")
+DLL_PATH = Path("/home/amd/TTSD/libtthsd.so")
 DOWNLOAD_DIR = Path("/home/amd/TTSD/test_downloads")
 MANIFEST_PATH = Path("/home/amd/TTSD/test_files/manifest.json")
 

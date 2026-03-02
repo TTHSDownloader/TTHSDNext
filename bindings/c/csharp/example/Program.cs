@@ -10,7 +10,7 @@ namespace TthsdExample
         {
             Console.WriteLine("🚀 TTHSD C# 示例启动");
 
-            // 动态库查找（P/Invoke 默认搜索路径，或将 TTHSD.dll/so/dylib 放到工作目录）
+            // 动态库查找（P/Invoke 默认搜索路径，或将 tthsd.dll/so/dylib 放到工作目录）
             await using var dl = new TTHSDownloader();
 
             var (id, events) = dl.StartDownload(

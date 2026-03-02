@@ -88,7 +88,7 @@ Header-only 封装，依赖 [nlohmann/json](https://github.com/nlohmann/json)，
 
 int main() {
     TTHSDownloader dl;
-    dl.load();  // 自动搜索 TTHSD.dll / TTHSD.so / TTHSD.dylib
+    dl.load();  // 自动搜索 tthsd.dll / libtthsd.so / libtthsd.dylib
 
     int id = dl.startDownload(
         {"https://example.com/a.zip"},

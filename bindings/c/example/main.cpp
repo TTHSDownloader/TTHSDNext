@@ -4,7 +4,7 @@
  * 编译方式:
  *   mkdir build && cd build
  *   cmake .. && make
- *   cp /path/to/TTHSD.so ./
+ *   cp /path/to/libtthsd.so ./
  *   ./download_example
  */
 

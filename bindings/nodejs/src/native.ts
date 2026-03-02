@@ -21,9 +21,9 @@ import { DownloadCallback, DownloadEvent, CallbackData } from "./types";
  */
 function getDefaultLibName(): string {
   switch (process.platform) {
-    case "win32":  return "TTHSD.dll";
-    case "darwin": return "TTHSD.dylib";
-    default:       return "TTHSD.so";
+    case "win32":  return "tthsd.dll";
+    case "darwin": return "libtthsd.dylib";
+    default:       return "libtthsd.so";
   }
 }
 

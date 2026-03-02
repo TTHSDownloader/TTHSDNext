@@ -50,8 +50,8 @@ impl TthsdRaw {
 
     /// 根据操作系统返回默认动态库文件名
     pub fn default_lib_name() -> &'static str {
-        #[cfg(target_os = "windows")]  { "TTHSD.dll"    }
-        #[cfg(target_os = "macos")]    { "TTHSD.dylib"  }
-        #[cfg(not(any(target_os = "windows", target_os = "macos")))] { "TTHSD.so" }
+        #[cfg(target_os = "windows")]  { "tthsd.dll"    }
+        #[cfg(target_os = "macos")]    { "libtthsd.dylib"  }
+        #[cfg(not(any(target_os = "windows", target_os = "macos")))] { "libtthsd.so" }
     }
 }

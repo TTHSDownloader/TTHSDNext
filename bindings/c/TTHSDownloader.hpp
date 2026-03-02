@@ -11,7 +11,7 @@
  * 使用示例:
  * ```cpp
  * TTHSDownloader dl;
- * dl.load();  // 自动搜索 TTHSD.dll/TTHSD.so/TTHSD.dylib
+ * dl.load();  // 自动搜索 tthsd.dll/libtthsd.so/libtthsd.dylib
  *
  * int id = dl.startDownload(
  *   {"https://example.com/a.zip"},
@@ -39,16 +39,16 @@
   #define TTHSD_LIB_OPEN(p)    LoadLibraryA(p)
   #define TTHSD_LIB_SYM(h, s)  GetProcAddress((HMODULE)(h), s)
   #define TTHSD_LIB_CLOSE(h)   FreeLibrary((HMODULE)(h))
-  #define TTHSD_DEFAULT_LIB    "TTHSD.dll"
+  #define TTHSD_DEFAULT_LIB    "tthsd.dll"
 #else
   #include <dlfcn.h>
   #define TTHSD_LIB_OPEN(p)    dlopen(p, RTLD_LAZY)
   #define TTHSD_LIB_SYM(h, s)  dlsym(h, s)
   #define TTHSD_LIB_CLOSE(h)   dlclose(h)
   #ifdef __APPLE__
-    #define TTHSD_DEFAULT_LIB  "TTHSD.dylib"
+    #define TTHSD_DEFAULT_LIB  "libtthsd.dylib"
   #else
-    #define TTHSD_DEFAULT_LIB  "TTHSD.so"
+    #define TTHSD_DEFAULT_LIB  "libtthsd.so"
   #endif
 #endif
 

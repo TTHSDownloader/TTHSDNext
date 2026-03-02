@@ -11,9 +11,9 @@ macos.debug =             "res://addons/tthsd/bin/libtthsd_godot.dylib"
 macos.release =           "res://addons/tthsd/bin/libtthsd_godot.dylib"
 
 [dependencies]
-linux.debug.x86_64 =   {"res://addons/tthsd/bin/TTHSD.so": ""}
-linux.release.x86_64 = {"res://addons/tthsd/bin/TTHSD.so": ""}
-windows.debug.x86_64 = {"res://addons/tthsd/bin/TTHSD.dll": ""}
-windows.release.x86_64 = {"res://addons/tthsd/bin/TTHSD.dll": ""}
-macos.debug =   {"res://addons/tthsd/bin/TTHSD.dylib": ""}
-macos.release = {"res://addons/tthsd/bin/TTHSD.dylib": ""}
+linux.debug.x86_64 =   {"res://addons/tthsd/bin/libtthsd.so": ""}
+linux.release.x86_64 = {"res://addons/tthsd/bin/libtthsd.so": ""}
+windows.debug.x86_64 = {"res://addons/tthsd/bin/tthsd.dll": ""}
+windows.release.x86_64 = {"res://addons/tthsd/bin/tthsd.dll": ""}
+macos.debug =   {"res://addons/tthsd/bin/libtthsd.dylib": ""}
+macos.release = {"res://addons/tthsd/bin/libtthsd.dylib": ""}
