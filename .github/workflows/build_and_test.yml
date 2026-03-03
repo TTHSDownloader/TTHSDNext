@@ -314,31 +314,56 @@ jobs:
 
           mkdir -p $HOME/.ohos-wrappers
 
-          # aarch64 wrapper
-          cat > $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang.sh << WRAPPER
+          # aarch64 clang wrapper (含 -lstdc++ → -lc++ 替换)
+          cat > $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang.sh << 'WRAPPER'
           #!/bin/bash
-          exec "$NDK_LLVM/bin/clang" --target=aarch64-linux-ohos --sysroot="$SYSROOT" "\$@"
+          ARGS=()
+          for arg in "$@"; do
+            if [ "$arg" = "-lstdc++" ]; then ARGS+=("-lc++")
+            else ARGS+=("$arg"); fi
+          done
+          exec "PLACEHOLDER_LLVM/bin/clang" --target=aarch64-linux-ohos --sysroot="PLACEHOLDER_SYSROOT" "${ARGS[@]}"
           WRAPPER
+          sed -i "s|PLACEHOLDER_LLVM|$NDK_LLVM|g; s|PLACEHOLDER_SYSROOT|$SYSROOT|g" $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang.sh
           chmod +x $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang.sh
 
-          # x86_64 wrapper
-          cat > $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang.sh << WRAPPER
+          # x86_64 clang wrapper
+          cat > $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang.sh << 'WRAPPER'
           #!/bin/bash
-          exec "$NDK_LLVM/bin/clang" --target=x86_64-linux-ohos --sysroot="$SYSROOT" "\$@"
+          ARGS=()
+          for arg in "$@"; do
+            if [ "$arg" = "-lstdc++" ]; then ARGS+=("-lc++")
+            else ARGS+=("$arg"); fi
+          done
+          exec "PLACEHOLDER_LLVM/bin/clang" --target=x86_64-linux-ohos --sysroot="PLACEHOLDER_SYSROOT" "${ARGS[@]}"
           WRAPPER
+          sed -i "s|PLACEHOLDER_LLVM|$NDK_LLVM|g; s|PLACEHOLDER_SYSROOT|$SYSROOT|g" $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang.sh
           chmod +x $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang.sh
 
-          # C++ wrapper  
-          cat > $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang++.sh << WRAPPER
+          # aarch64 C++ wrapper
+          cat > $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang++.sh << 'WRAPPER'
           #!/bin/bash
-          exec "$NDK_LLVM/bin/clang++" --target=aarch64-linux-ohos --sysroot="$SYSROOT" "\$@"
+          ARGS=()
+          for arg in "$@"; do
+            if [ "$arg" = "-lstdc++" ]; then ARGS+=("-lc++")
+            else ARGS+=("$arg"); fi
+          done
+          exec "PLACEHOLDER_LLVM/bin/clang++" --target=aarch64-linux-ohos --sysroot="PLACEHOLDER_SYSROOT" "${ARGS[@]}"
           WRAPPER
+          sed -i "s|PLACEHOLDER_LLVM|$NDK_LLVM|g; s|PLACEHOLDER_SYSROOT|$SYSROOT|g" $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang++.sh
           chmod +x $HOME/.ohos-wrappers/aarch64-unknown-linux-ohos-clang++.sh
 
-          cat > $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang++.sh << WRAPPER
+          # x86_64 C++ wrapper
+          cat > $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang++.sh << 'WRAPPER'
           #!/bin/bash
-          exec "$NDK_LLVM/bin/clang++" --target=x86_64-linux-ohos --sysroot="$SYSROOT" "\$@"
+          ARGS=()
+          for arg in "$@"; do
+            if [ "$arg" = "-lstdc++" ]; then ARGS+=("-lc++")
+            else ARGS+=("$arg"); fi
+          done
+          exec "PLACEHOLDER_LLVM/bin/clang++" --target=x86_64-linux-ohos --sysroot="PLACEHOLDER_SYSROOT" "${ARGS[@]}"
           WRAPPER
+          sed -i "s|PLACEHOLDER_LLVM|$NDK_LLVM|g; s|PLACEHOLDER_SYSROOT|$SYSROOT|g" $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang++.sh
           chmod +x $HOME/.ohos-wrappers/x86_64-unknown-linux-ohos-clang++.sh
 
           # 配置 Cargo linker + ar（必须在同一个 section 内，不能 duplicate key）
