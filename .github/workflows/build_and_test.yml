@@ -288,6 +288,30 @@ jobs:
           NDK_LLVM="$OHOS_NDK_HOME/llvm"
           SYSROOT="$OHOS_NDK_HOME/sysroot"
 
+          # ===== 修复: OHOS 用 libc++ (LLVM) 而非 libstdc++ (GNU) =====
+          # boring-sys2 等 crate 链接时传 -lstdc++，OHOS sysroot 里没有
+          # 创建 libstdc++ → libc++ 符号链接让链接器找到
+          for ARCH_DIR in aarch64-linux-ohos x86_64-linux-ohos; do
+            LIB_DIR="$SYSROOT/usr/lib/$ARCH_DIR"
+            if [ -d "$LIB_DIR" ]; then
+              echo "🔗 修复 $ARCH_DIR: libstdc++ → libc++"
+              # 动态库符号链接
+              if [ -f "$LIB_DIR/libc++.so" ] && [ ! -f "$LIB_DIR/libstdc++.so" ]; then
+                ln -sf libc++.so "$LIB_DIR/libstdc++.so"
+              fi
+              # 静态库符号链接
+              if [ -f "$LIB_DIR/libc++_static.a" ] && [ ! -f "$LIB_DIR/libstdc++.a" ]; then
+                ln -sf libc++_static.a "$LIB_DIR/libstdc++.a"
+              elif [ -f "$LIB_DIR/libc++.a" ] && [ ! -f "$LIB_DIR/libstdc++.a" ]; then
+                ln -sf libc++.a "$LIB_DIR/libstdc++.a"
+              fi
+              ls -la "$LIB_DIR"/libstdc++* "$LIB_DIR"/libc++* 2>/dev/null || true
+            else
+              echo "⚠️  $LIB_DIR 不存在，尝试搜索..."
+              find "$SYSROOT" -name "libc++*" -type f 2>/dev/null | head -5
+            fi
+          done
+
           mkdir -p $HOME/.ohos-wrappers
 
           # aarch64 wrapper
@@ -349,6 +373,9 @@ jobs:
 
           # 添加 llvm/bin 到 PATH
           export PATH="$NDK_LLVM/bin:$PATH"
+
+          # 告知 cc crate 使用 libc++ 而非 libstdc++
+          export CXXSTDLIB="c++"
 
           cargo +nightly build --release --target ${{ matrix.target }}
 
