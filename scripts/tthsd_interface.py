@@ -20,6 +20,7 @@ import logging
 import platform
 import queue
 import sys
+import sysconfig
 import types
 import uuid
 from pathlib import Path
