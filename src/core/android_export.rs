@@ -42,9 +42,20 @@ fn get_downloader_id() -> &'static Mutex<i32> {
 }
 
 /// 从 JString 获取 String (jni 0.22 新 API)
+/// 使用 with_env + into_outcome 获取 Env 引用来调用 get_string
 #[cfg(feature = "android")]
-fn jstring_to_string(env: EnvUnowned<'_>, jstr: &jni::objects::JString<'_>) -> Option<String> {
-    env.with_env(|e| jstr.to_string(e)).ok().flatten()
+use jni::Outcome;
+
+#[cfg(feature = "android")]
+fn jstring_to_string(env: &mut EnvUnowned<'_>, jstr: &jni::objects::JString<'_>) -> Option<String> {
+    let outcome = env.with_env(|e: &mut jni::Env<'_>| -> Result<String, jni::errors::Error> {
+        let java_str = e.get_string(jstr)?;
+        Ok(java_str.to_string())
+    });
+    match outcome.into_outcome() {
+        Outcome::Ok(s) => Some(s),
+        _ => None,
+    }
 }
 
 /// JNI 函数: 启动下载任务
@@ -64,7 +75,7 @@ fn jstring_to_string(env: EnvUnowned<'_>, jstr: &jni::objects::JString<'_>) -> O
 #[cfg(feature = "android")]
 #[unsafe(no_mangle)]
 pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownload<'local>(
-    env: EnvUnowned<'local>,
+    mut env: EnvUnowned<'local>,
     _class: JClass,
     tasks_json: jni::objects::JString<'local>,
     thread_count: jint,
@@ -75,7 +86,7 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownload<'local>(
     is_multiple: jboolean,
 ) -> jint {
     // 转换 JSON 字符串
-    let tasks_str: String = match jstring_to_string(env, &tasks_json) {
+    let tasks_str: String = match jstring_to_string(&mut env, &tasks_json) {
         Some(s) => s,
         None => return -1,
     };
@@ -93,7 +104,7 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownload<'local>(
 
     // 获取回调 URL
     let cb_url = if use_callback_url != jni::sys::JNI_FALSE {
-        match jstring_to_string(env, &callback_url) {
+        match jstring_to_string(&mut env, &callback_url) {
             Some(url) if !url.is_empty() => Some(url),
             _ => return -1,
         }
@@ -163,7 +174,7 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownload<'local>(
 #[cfg(feature = "android")]
 #[unsafe(no_mangle)]
 pub extern "C" fn Java_com_tthsd_TTHSDLibrary_getDownloader<'local>(
-    env: EnvUnowned<'local>,
+    mut env: EnvUnowned<'local>,
     _class: JClass,
     tasks_json: jni::objects::JString<'local>,
     thread_count: jint,
@@ -172,7 +183,7 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_getDownloader<'local>(
     callback_url: jni::objects::JString<'local>,
     use_socket: jboolean,
 ) -> jint {
-    let tasks_str: String = match jstring_to_string(env, &tasks_json) {
+    let tasks_str: String = match jstring_to_string(&mut env, &tasks_json) {
         Some(s) => s,
         None => return -1,
     };
@@ -185,7 +196,7 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_getDownloader<'local>(
     };
 
     let cb_url = if use_callback_url != jni::sys::JNI_FALSE {
-        match jstring_to_string(env, &callback_url) {
+        match jstring_to_string(&mut env, &callback_url) {
             Some(url) if !url.is_empty() => Some(url),
             _ => return -1,
         }
