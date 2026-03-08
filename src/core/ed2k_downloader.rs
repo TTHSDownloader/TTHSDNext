@@ -54,7 +54,7 @@ impl ED2KDownloader {
             return Err(format!("不支持的 ED2K 类型: '{}' (仅支持 file)", parts[1]));
         }
 
-        let name = url::form_urlencoded::parse(parts[2].as_bytes())
+        let _name = url::form_urlencoded::parse(parts[2].as_bytes())
             .next()
             .map(|(k, _)| k.into_owned())
             .unwrap_or_else(|| parts[2].to_string());

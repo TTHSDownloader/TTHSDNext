@@ -148,7 +148,7 @@ impl WebSocketClient {
         }
         drop(conn_connected);
 
-        let message = Message::Text(String::from_utf8(payload)?);
+        let message = Message::Text(String::from_utf8(payload)?.into());
         conn.send(message).await?;
 
         Ok(())

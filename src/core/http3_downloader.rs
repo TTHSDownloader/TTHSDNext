@@ -155,7 +155,7 @@ impl Downloader for HTTP3Downloader {
 
         // 流式读取响应体
         let mut downloaded: i64 = 0;
-        use tokio::io::AsyncWriteExt;
+        // use tokio::io::AsyncWriteExt;
 
         loop {
             match stream.recv_data().await {

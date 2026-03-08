@@ -5,6 +5,7 @@ use tokio::sync::RwLock;
 use super::downloader_interface::{Downloader, BaseDownloader};
 use super::downloader::{DownloadTask, DownloadConfig};
 use super::performance_monitor::PerformanceMonitor;
+use russh::keys::ssh_key;
 
 /// SFTP 下载器
 /// 使用 russh (纯 Rust SSH) + russh-sftp 实现异步 SFTP 文件下载
@@ -61,12 +62,11 @@ struct SshHandler;
 impl russh::client::Handler for SshHandler {
     type Error = russh::Error;
 
-    async fn check_server_key(
+    fn check_server_key(
         &mut self,
-        _server_public_key: &russh::keys::key::PublicKey,
-    ) -> Result<bool, Self::Error> {
-        // 接受所有主机密钥（下载场景不需要严格验证）
-        Ok(true)
+        _server_public_key: &ssh_key::PublicKey,
+    ) -> impl Future<Output = Result<bool, Self::Error>> + Send {
+        async { Ok(true) }
     }
 }
 
@@ -93,7 +93,7 @@ impl Downloader for SFTPDownloader {
             .await
             .map_err(|e| format!("SSH 认证失败: {}", e))?;
 
-        if !auth_result {
+        if !auth_result.success() {
             return Err("SSH 密码认证被拒绝".into());
         }
 
