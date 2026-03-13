@@ -158,4 +158,4 @@ cargo ndk --target arm64-v8a --platform 21 build --release --features android
 
 ## 📄 协议
 
-本项目基于 **[GNU Affero General Public License v3.0 (GPL-3.0)](LICENSE)** 协议开源。这保证了核心底层下载软件始终维持开源与自由复制分发的权利，对代码的任意修改也请务必同等以 GPL 协议开源并向社区开放。
+本项目基于 **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)** 协议开源。这保证了核心底层下载软件始终维持开源与自由复制分发的权利，对代码的任意修改也请务必同等以 GPL 协议开源并向社区开放。
