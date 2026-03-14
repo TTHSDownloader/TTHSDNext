@@ -139,10 +139,10 @@ jobs:
         if: runner.os == 'Linux'
         run: upx --best --lzma ${{ matrix.artifact_name }}
 
-      # macOS 使用 strip
-      - name: 🔪 使用 strip 减小 macOS 体积
+      # macOS 使用 strip -S 仅剥离调试符号
+      - name: 🔪 使用 strip -S 减小 macOS 体积（仅剥离调试符号）
         if: runner.os == 'macOS'
-        run: strip ${{ matrix.artifact_name }}
+        run: strip -S ${{ matrix.artifact_name }}
 
       - name: 📤 上传产物
         uses: actions/upload-artifact@v4
