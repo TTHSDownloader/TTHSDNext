@@ -81,6 +81,9 @@
  │    └── tthsd_android_x86_64.so# Android 模拟器库
  ├── 📁 harmony/
  │    └── tthsd_harmony_arm64.so # HarmonyOS ARM64 库
+ ├── 📁 ios/
+ │    └── tthsd_ios_arm64_device.dylib # iOS ARM64 设备库
+ │    └── tthsd_ios_arm64_simulator.dylib # iOS ARM64 模拟器库
  └── 📁 scripts/
       ├── TTHSD_interface.py     # Python FFI 接口封装示范
       └── test_comprehensive.py  # 本地全量功能、稳定性与性能压测套件
