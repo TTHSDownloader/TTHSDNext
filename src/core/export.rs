@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use super::downloader::{HSDownloader, DownloadTask, DownloadConfig, Event, EventType, UA};
 use super::send_message::send_message;
+use super::license_output::output_license_once;
 
 lazy_static::lazy_static! {
     static ref RUNTIME: tokio::runtime::Runtime = tokio::runtime::Builder::new_multi_thread()
@@ -37,6 +38,8 @@ pub extern "C" fn start_download(
     is_multiple: *const bool,
     headers_json: *const i8,
 ) -> i32 {
+    output_license_once();
+
     if tasks_data.is_null() || task_count <= 0 {
         eprintln!("无效参数: tasks_data={:?}, task_count={}", tasks_data, task_count);
         return -1;
@@ -178,6 +181,8 @@ pub extern "C" fn get_downloader(
     use_socket: *const bool,
     headers_json: *const i8,
 ) -> i32 {
+    output_license_once();
+
     if tasks_data.is_null() || task_count <= 0 {
         return -1;
     }
@@ -265,6 +270,8 @@ pub extern "C" fn get_downloader(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn start_download_id(id: i32) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -304,6 +311,8 @@ pub extern "C" fn start_download_id(id: i32) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn start_multiple_downloads_id(id: i32) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -343,6 +352,8 @@ pub extern "C" fn start_multiple_downloads_id(id: i32) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn pause_download(id: i32) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -360,6 +371,8 @@ pub extern "C" fn pause_download(id: i32) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn resume_download(id: i32) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -380,6 +393,8 @@ pub extern "C" fn resume_download(id: i32) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn stop_download(id: i32) -> i32 {
+    output_license_once();
+
     let mut downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.remove(&id);
     drop(downloaders);
@@ -400,6 +415,8 @@ pub extern "C" fn stop_download(id: i32) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn set_speed_limit(id: i32, speed_limit_bps: u64) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -418,6 +435,8 @@ pub extern "C" fn set_speed_limit(id: i32, speed_limit_bps: u64) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn set_proxy(id: i32, proxy_url: *const i8) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -446,6 +465,8 @@ pub extern "C" fn set_proxy(id: i32, proxy_url: *const i8) -> i32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn set_retry_config(id: i32, max_retries: u32, retry_delay_ms: u64, max_retry_delay_ms: u64) -> i32 {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -467,6 +488,8 @@ pub extern "C" fn set_retry_config(id: i32, max_retries: u32, retry_delay_ms: u6
 
 #[unsafe(no_mangle)]
 pub extern "C" fn get_performance_stats(id: i32) -> *mut std::ffi::c_char {
+    output_license_once();
+
     let downloaders = get_downloaders().lock().unwrap();
     let downloader = downloaders.get(&id).cloned();
     drop(downloaders);
@@ -492,6 +515,8 @@ pub extern "C" fn get_performance_stats(id: i32) -> *mut std::ffi::c_char {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn free_string(s: *mut std::ffi::c_char) {
+    output_license_once();
+
     if !s.is_null() {
         unsafe { drop(std::ffi::CString::from_raw(s)) };
     }

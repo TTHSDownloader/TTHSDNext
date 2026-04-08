@@ -14,6 +14,7 @@ pub mod send_message;
 pub mod performance_monitor;
 pub mod get_downloader;
 pub mod export;
+pub mod license_output;
 
 #[cfg(feature = "android")]
 pub mod android_export;
