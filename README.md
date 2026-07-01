@@ -3,7 +3,7 @@
   <p>一个高性能、跨平台、多语言可调用的下载引擎内核</p>
   <img src="https://img.shields.io/badge/Rust-1.75+-orange.svg" alt="Rust Version">
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Android%20%7C%20iOS%20%7C%20HarmonyOS-blue.svg" alt="Platform">
-  <img src="https://img.shields.io/badge/License-GPL--3.0-green.svg" alt="License">
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-green.svg" alt="License">
 </div>
 
 > Copyright © 2026 - present TT23XRStudio 保留所有权利
@@ -170,7 +170,7 @@ cargo ndk --target arm64-v8a --platform 21 build --release --features android
 
 ## 📄 协议
 
-本项目基于 **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)** 协议开源。这保证了核心底层下载软件始终维持开源与自由复制分发的权利，对代码的任意修改也请务必同等以 GPL 协议开源并向社区开放。
+本项目基于 **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE.md)**+ 附加权限 开源。这保证了核心底层下载软件始终维持开源与自由复制分发的权利，对代码的任意修改也请务必同等以 AGPL 协议开源并向社区开放，且保证了其他只是借用本项目来开发的开发者的权益。
 
 ## 其他
 
