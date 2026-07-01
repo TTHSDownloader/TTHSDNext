@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::RwLock;
-use super::downloader::{DownloadConfig, Event};
+use super::downloader::{DownloadConfig, Event, EventType};
 #[cfg(feature = "websocket")]
 use super::websocket_client::WebSocketClient;
 #[cfg(feature = "socket")]
 use super::socket_client::SocketClient;
+
+/// 保护 stderr 输出，防止多线程交错
+static STDERR_LOCK: Mutex<()> = Mutex::new(());
 
 pub async fn send_message(
     event: Event,
@@ -61,8 +65,12 @@ pub async fn send_message(
             }
         }
 
-        if !is_called && event_clone.event_type != super::downloader::EventType::Update {
-            eprintln!("警告: 没有回调函数 (event {:?}, data {:?})", event_clone.name, data);
+        if !is_called {
+            let silent = matches!(event_clone.event_type, EventType::Update | EventType::Msg);
+            if !silent {
+                let _lock = STDERR_LOCK.lock().unwrap();
+                eprintln!("警告: 没有回调函数 (event {:?}, data {:?})", event_clone.name, data);
+            }
         }
     });
 

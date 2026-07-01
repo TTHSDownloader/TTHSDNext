@@ -310,10 +310,10 @@ class TLDownloader:
 
         # --- get_performance_stats ---
         dll.get_performance_stats.argtypes = [ctypes.c_int]
-        dll.get_performance_stats.restype = ctypes.c_char_p
+        dll.get_performance_stats.restype = ctypes.c_void_p
 
         # --- free_string ---
-        dll.free_string.argtypes = [ctypes.c_char_p]
+        dll.free_string.argtypes = [ctypes.c_void_p]
         dll.free_string.restype = None
 
     # ------------------------------------------------------------------
@@ -334,22 +334,19 @@ class TLDownloader:
             try:
                 # 获取事件字符串
                 if event_ptr is not None:
-                    event_bytes: bytes = event_ptr.value  # type: ignore
-                    event_str: str = event_bytes.decode("utf-8")
+                    event_str: str = event_ptr.decode("utf-8")
                 else:
                     event_str = "{}"
                 
                 # 获取消息字符串
                 if msg_ptr is not None:
-                    msg_bytes: bytes = msg_ptr.value  # type: ignore
-                    msg_str: str = msg_bytes.decode("utf-8")
+                    msg_str: str = msg_ptr.decode("utf-8")
                 else:
                     msg_str = "{}"
                 
                 event_dict: dict[str, Any] = json.loads(event_str)
                 msg_dict: dict[str, Any] = json.loads(msg_str)
 
-                print(event_dict, msg_dict)
                 user_callback(event_dict, msg_dict)
             except Exception as exc:
                 _logger.error(f"回调函数异常 (已捕获，不影响下载): {exc}", exc_info=True)
@@ -693,12 +690,15 @@ class TLDownloader:
             - retried_chunks: 重试分块数
             - elapsed_time: 运行时间 (秒)
         """
-        result_ptr = self._dll.get_performance_stats(ctypes.c_int(downloader_id))
+        raw_ptr = self._dll.get_performance_stats(ctypes.c_int(downloader_id))
         try:
-            result_str = ctypes.string_at(result_ptr).decode("utf-8")
+            if not raw_ptr:
+                return {}
+            result_str = ctypes.string_at(raw_ptr).decode("utf-8")
             return json.loads(result_str) if result_str else {}
         finally:
-            self._dll.free_string(result_ptr)
+            if raw_ptr:
+                self._dll.free_string(raw_ptr)
 
     def close(self) -> None:
         """

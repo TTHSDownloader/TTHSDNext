@@ -5,6 +5,9 @@ version = "0.1.0-dev.6"
 edition = "2024"
 license = "GNU Affero General Public License v3.0"
 
+[unstable]
+edition-2024 = true
+
 [lints.rust]
 non_snake_case = "allow"
 

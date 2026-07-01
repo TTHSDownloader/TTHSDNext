@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metalink xmlns="urn:ietf:params:xml:ns:metalink">
+  <file name="medium_1mb.bin">
+    <size>1048576</size>
+    <url priority="1">http://127.0.0.1:18080/medium_1mb.bin</url>
+  </file>
+</metalink>

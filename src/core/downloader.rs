@@ -442,7 +442,7 @@ impl HSDownloader {
 
             let mut current_retry = 0;
             let mut delay = retry_delay_ms;
-            let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>>;
+            let mut last_error: Option<Box<dyn std::error::Error + Send + Sync>> = None;
 
             loop {
                 let mut downloader = super::get_downloader::get_downloader(config.clone()).await;
@@ -461,7 +461,7 @@ impl HSDownloader {
                             retry_data.insert("Text".to_string(), serde_json::Value::String(format!("Retry {} succeeded", current_retry)));
                             let _ = send_message(retry_event, retry_data, &config, &ws_client, &socket_client).await;
                         }
-                        return;
+                        break;
                     }
                     Err(e) => {
                         last_error = Some(e);
@@ -623,5 +623,124 @@ impl HSDownloader {
             return Some(monitor.get_stats().await);
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    // ── merge_headers ──
+
+    #[test]
+    fn test_merge_headers_global_only() {
+        let mut global = HashMap::new();
+        global.insert("User-Agent".to_string(), "test".to_string());
+        let task = HashMap::new();
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged.get("User-Agent").unwrap(), "test");
+    }
+
+    #[test]
+    fn test_merge_headers_task_overrides_global() {
+        let mut global = HashMap::new();
+        global.insert("X-Custom".to_string(), "global".to_string());
+        let mut task = HashMap::new();
+        task.insert("X-Custom".to_string(), "task".to_string());
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert_eq!(merged.get("X-Custom").unwrap(), "task");
+    }
+
+    #[test]
+    fn test_merge_headers_task_only() {
+        let global = HashMap::new();
+        let mut task = HashMap::new();
+        task.insert("X-Task".to_string(), "value".to_string());
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged.get("X-Task").unwrap(), "value");
+    }
+
+    #[test]
+    fn test_merge_headers_combined() {
+        let mut global = HashMap::new();
+        global.insert("Global".to_string(), "g".to_string());
+        let mut task = HashMap::new();
+        task.insert("Task".to_string(), "t".to_string());
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged.get("Global").unwrap(), "g");
+        assert_eq!(merged.get("Task").unwrap(), "t");
+    }
+
+    #[test]
+    fn test_merge_headers_empty() {
+        let global = HashMap::new();
+        let task = HashMap::new();
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert!(merged.is_empty());
+    }
+
+    #[test]
+    fn test_merge_headers_multiple_overrides() {
+        let mut global = HashMap::new();
+        global.insert("A".to_string(), "a_global".to_string());
+        global.insert("B".to_string(), "b_global".to_string());
+        global.insert("C".to_string(), "c".to_string());
+        let mut task = HashMap::new();
+        task.insert("A".to_string(), "a_task".to_string());
+        task.insert("B".to_string(), "b_task".to_string());
+        let merged = HSDownloader::merge_headers(&global, &task);
+        assert_eq!(merged.get("A").unwrap(), "a_task");
+        assert_eq!(merged.get("B").unwrap(), "b_task");
+        assert_eq!(merged.get("C").unwrap(), "c");
+    }
+
+    // ── format_error ──
+
+    #[test]
+    fn test_format_error_404() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "HTTP status code: 404".into();
+        let msg = HSDownloader::format_error(&err);
+        assert!(msg.contains("404"));
+        assert!(msg.contains("Not Found"));
+    }
+
+    #[test]
+    fn test_format_error_403() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "HTTP status code: 403".into();
+        let msg = HSDownloader::format_error(&err);
+        assert!(msg.contains("403"));
+        assert!(msg.contains("Forbidden"));
+    }
+
+    #[test]
+    fn test_format_error_502() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "status code: 502".into();
+        let msg = HSDownloader::format_error(&err);
+        assert!(msg.contains("502"));
+    }
+
+    #[test]
+    fn test_format_error_connection_refused() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "Connection refused".into();
+        let msg = HSDownloader::format_error(&err);
+        assert!(msg.contains("Connection refused"));
+    }
+
+    #[test]
+    fn test_format_error_timeout() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "operation timed out".into();
+        let msg = HSDownloader::format_error(&err);
+        assert!(msg.contains("Timeout"));
+    }
+
+    #[test]
+    fn test_format_error_generic() {
+        let err: Box<dyn std::error::Error + Send + Sync> = "Some random error".into();
+        let msg = HSDownloader::format_error(&err);
+        assert_eq!(msg, "Some random error");
     }
 }

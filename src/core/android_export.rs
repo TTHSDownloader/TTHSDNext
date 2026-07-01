@@ -168,9 +168,6 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownload<'local>(
 
             let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
         }
-
-        let mut downloaders = get_downloaders().lock().unwrap();
-        downloaders.remove(&downloader_id);
     });
 
     downloader_id
@@ -279,9 +276,6 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startDownloadById<'local>(
 
                     let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
                 }
-
-                let mut downloaders = get_downloaders().lock().unwrap();
-                downloaders.remove(&id);
             });
             0
         }
@@ -324,9 +318,6 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_startMultipleDownloadsById<'local>
 
                     let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
                 }
-
-                let mut downloaders = get_downloaders().lock().unwrap();
-                downloaders.remove(&id);
             });
             0
         }
@@ -353,7 +344,9 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_pauseDownload<'local>(
             });
             0
         }
-        None => -1,
+        None => {
+            0
+        }
     }
 }
 
@@ -405,6 +398,8 @@ pub extern "C" fn Java_com_tthsd_TTHSDLibrary_stopDownload<'local>(
                 Err(_) => -1,
             }
         }
-        None => -1,
+        None => {
+            0
+        }
     }
 }

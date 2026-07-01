@@ -113,21 +113,135 @@ pub enum Protocol {
 }
 
 /// Detect protocol type from URL string
+/// File extensions take precedence over HTTP scheme so that
+/// `.metalink`/`.meta4`/`.torrent` URLs are routed to the correct handler
+/// even when served over HTTP(S).
 fn detect_scheme(url: &str) -> Protocol {
     let lower = url.to_lowercase();
+    // Strip query string before checking file extensions
+    let path = lower.split('?').next().unwrap_or(&lower);
+    if path.ends_with(".metalink") || path.ends_with(".meta4") {
+        return Protocol::Metalink;
+    }
+    if path.ends_with(".torrent") {
+        return Protocol::BitTorrent;
+    }
+    // Scheme-based checks
     if lower.starts_with("http://") || lower.starts_with("https://") {
         Protocol::Http
     } else if lower.starts_with("ftp://") || lower.starts_with("ftps://") {
         Protocol::Ftp
     } else if lower.starts_with("sftp://") {
         Protocol::Sftp
-    } else if lower.starts_with("magnet:") || lower.ends_with(".torrent") {
+    } else if lower.starts_with("magnet:") {
         Protocol::BitTorrent
     } else if lower.starts_with("ed2k://") {
         Protocol::Ed2k
-    } else if lower.ends_with(".metalink") || lower.ends_with(".meta4") {
-        Protocol::Metalink
     } else {
         Protocol::Unknown
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── HTTP ──
+
+    #[test]
+    fn test_detect_http() {
+        assert_eq!(detect_scheme("http://example.com/file.zip"), Protocol::Http);
+    }
+
+    #[test]
+    fn test_detect_https() {
+        assert_eq!(detect_scheme("https://example.com/file.zip"), Protocol::Http);
+    }
+
+    #[test]
+    fn test_detect_https_with_query() {
+        assert_eq!(detect_scheme("https://cdn.example.com/dl?file=123&token=abc"), Protocol::Http);
+    }
+
+    #[test]
+    fn test_detect_https_mixed_case() {
+        assert_eq!(detect_scheme("HTTPS://EXAMPLE.COM/FILE.ZIP"), Protocol::Http);
+    }
+
+    // ── FTP ──
+
+    #[test]
+    fn test_detect_ftp() {
+        assert_eq!(detect_scheme("ftp://ftp.gnu.org/README"), Protocol::Ftp);
+    }
+
+    #[test]
+    fn test_detect_ftps() {
+        assert_eq!(detect_scheme("ftps://secure-ftp.example.com/file"), Protocol::Ftp);
+    }
+
+    // ── SFTP ──
+
+    #[test]
+    fn test_detect_sftp() {
+        assert_eq!(detect_scheme("sftp://user@host:22/path/to/file"), Protocol::Sftp);
+    }
+
+    // ── BitTorrent ──
+
+    #[test]
+    fn test_detect_magnet() {
+        assert_eq!(detect_scheme("magnet:?xt=urn:btih:ABC123&dn=test"), Protocol::BitTorrent);
+    }
+
+    #[test]
+    fn test_detect_torrent_file() {
+        assert_eq!(detect_scheme("https://example.com/ubuntu.torrent"), Protocol::BitTorrent);
+    }
+
+    #[test]
+    fn test_detect_torrent_file_with_query() {
+        assert_eq!(detect_scheme("https://example.com/file.torrent?ref=1"), Protocol::BitTorrent);
+    }
+
+    // ── ED2K ──
+
+    #[test]
+    fn test_detect_ed2k() {
+        assert_eq!(detect_scheme("ed2k://|file|test.iso|1073741824|HASH|/"), Protocol::Ed2k);
+    }
+
+    // ── Metalink ──
+
+    #[test]
+    fn test_detect_metalink() {
+        assert_eq!(detect_scheme("https://example.com/arch.metalink"), Protocol::Metalink);
+    }
+
+    #[test]
+    fn test_detect_meta4() {
+        assert_eq!(detect_scheme("https://example.com/arch.meta4"), Protocol::Metalink);
+    }
+
+    // ── Unknown ──
+
+    #[test]
+    fn test_detect_unknown_scheme() {
+        assert_eq!(detect_scheme("gopher://example.com/file"), Protocol::Unknown);
+    }
+
+    #[test]
+    fn test_detect_empty_string() {
+        assert_eq!(detect_scheme(""), Protocol::Unknown);
+    }
+
+    #[test]
+    fn test_detect_random_text() {
+        assert_eq!(detect_scheme("not a url at all"), Protocol::Unknown);
+    }
+
+    #[test]
+    fn test_detect_ipfs() {
+        assert_eq!(detect_scheme("ipfs://QmHash"), Protocol::Unknown);
     }
 }

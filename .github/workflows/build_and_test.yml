@@ -614,6 +614,11 @@ jobs:
           name: ${{ matrix.artifact }}
           path: .
 
+      - name: 📋 重命名产物 (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: mv ${{ matrix.artifact }} TaiLerDownloader.dylib
+
       - name: 🐍 安装 Python
         uses: actions/setup-python@v5
         with:
@@ -623,9 +628,14 @@ jobs:
         shell: bash
         run: |
           echo "验证动态库可被加载..."
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            lib_name="TaiLerDownloader.dylib"
+          else
+            lib_name="${{ matrix.artifact }}"
+          fi
           python3 -c "
           import ctypes, sys, os
-          lib_name = '${{ matrix.artifact }}'
+          lib_name = '$lib_name'
           try:
               lib = ctypes.CDLL('./' + lib_name)
               print(f'[SUCCESS] Load {lib_name}')
@@ -635,13 +645,15 @@ jobs:
               sys.exit(1)
           "
 
-      - name: 🧪 运行 Python 单元测试
+      - name: 🦀 运行 Rust 单元测试
+        shell: bash
+        run: cargo test --workspace
+
+      - name: 🧪 运行 Python 测试
         shell: bash
         run: |
-          echo "运行 TaiLerDownloader Python 单元测试..."
-          cd scripts
-          python3 -m pytest test_TaiLerDownloader.py -v --tb=short || true
-        continue-on-error: true
+          pip install pytest
+          python -m pytest test/ -v --tb=short
 
   # ═══════════════════════════════════════════════════════════════
   #  发布 Release (仅在 tag 推送时触发)

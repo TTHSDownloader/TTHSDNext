@@ -1,0 +1,22 @@
+{
+  "tiny_1kb.bin": {
+    "size": 1024,
+    "md5": "00ec730da764aa2dc00b0ce23a2868a1"
+  },
+  "small_100kb.bin": {
+    "size": 102400,
+    "md5": "5b48b5b7bf684ef165600bd9af9004ee"
+  },
+  "medium_1mb.bin": {
+    "size": 1048576,
+    "md5": "4a78a005067c1c7c67ec7a81ac9d8d3e"
+  },
+  "large_10mb.bin": {
+    "size": 10485760,
+    "md5": "1f58dbcd65275ccd1e874ae4d929f915"
+  },
+  "huge_100mb.bin": {
+    "size": 104857600,
+    "md5": "c947ac52a6e34c0c18df31f0cdea94d9"
+  }
+}

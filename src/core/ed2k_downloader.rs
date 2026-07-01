@@ -17,6 +17,7 @@ pub struct ED2KDownloader {
 }
 
 /// Parsed ED2K link info
+#[derive(Debug)]
 struct Ed2kInfo {
     name: String,
     size: u64,
@@ -180,5 +181,111 @@ impl Default for ED2KDownloader {
             base: BaseDownloader::new(),
             monitor: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── parse_ed2k_url ──
+
+    #[test]
+    fn test_parse_ed2k_basic() {
+        let url = "ed2k://|file|test.iso|1073741824|A1B2C3D4E5F6G7H8A1B2C3D4E5F6G7H8|/";
+        let info = ED2KDownloader::parse_ed2k_url(url).unwrap();
+        assert_eq!(info.name, "test.iso");
+        assert_eq!(info.size, 1073741824);
+        assert_eq!(info.hash, "A1B2C3D4E5F6G7H8A1B2C3D4E5F6G7H8");
+    }
+
+    #[test]
+    fn test_parse_ed2k_percent_encoded() {
+        let url = "ed2k://|file|%E6%B5%8B%E8%AF%95.iso|1048576|ABCDEF1234567890ABCDEF1234567890|/";
+        let info = ED2KDownloader::parse_ed2k_url(url).unwrap();
+        assert_eq!(info.name, "测试.iso");
+        assert_eq!(info.size, 1048576);
+    }
+
+    #[test]
+    fn test_parse_ed2k_invalid_size() {
+        let url = "ed2k://|file|test.iso|not_a_number|ABCDEF1234567890ABCDEF1234567890|/";
+        let result = ED2KDownloader::parse_ed2k_url(url);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("size"));
+    }
+
+    #[test]
+    fn test_parse_ed2k_invalid_hash_length() {
+        let url = "ed2k://|file|test.iso|1024|SHORT|/";
+        let result = ED2KDownloader::parse_ed2k_url(url);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("hash length"));
+    }
+
+    #[test]
+    fn test_parse_ed2k_invalid_prefix() {
+        let result = ED2KDownloader::parse_ed2k_url("http://example.com/file.zip");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid ed2k://"));
+    }
+
+    #[test]
+    fn test_parse_ed2k_unsupported_type() {
+        let url = "ed2k://|server|test|1|hash|/";
+        let result = ED2KDownloader::parse_ed2k_url(url);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unsupported"));
+    }
+
+    #[test]
+    fn test_parse_ed2k_empty_hash() {
+        let url = "ed2k://|file|test.iso|1024||/";
+        let result = ED2KDownloader::parse_ed2k_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_ed2k_very_large_size() {
+        let url = "ed2k://|file|bigfile.iso|1099511627776|ABCDEF1234567890ABCDEF1234567890|/";
+        let info = ED2KDownloader::parse_ed2k_url(url).unwrap();
+        assert_eq!(info.size, 1099511627776); // 1 TB
+    }
+
+    // ── percent_decode ──
+
+    #[test]
+    fn test_percent_decode_ascii() {
+        assert_eq!(percent_decode("hello.txt"), "hello.txt");
+    }
+
+    #[test]
+    fn test_percent_decode_chinese() {
+        assert_eq!(percent_decode("%E6%B5%8B%E8%AF%95.iso"), "测试.iso");
+    }
+
+    #[test]
+    fn test_percent_decode_empty() {
+        assert_eq!(percent_decode(""), "");
+    }
+
+    #[test]
+    fn test_percent_decode_no_encoding() {
+        assert_eq!(percent_decode("test file (1).zip"), "test file (1).zip");
+    }
+
+    #[test]
+    fn test_percent_decode_invalid_hex() {
+        // %XY where XY is not valid hex should remain as-is
+        let result = percent_decode("%ZZtest");
+        assert_eq!(result, "%ZZtest");
+    }
+
+    #[test]
+    fn test_percent_decode_partial() {
+        // trailing % with no following chars
+        assert_eq!(percent_decode("test%"), "test%");
+        // % followed by only 1 char
+        assert_eq!(percent_decode("test%A"), "test%A");
     }
 }

@@ -160,9 +160,6 @@ pub extern "C" fn start_download(
 
             let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
         }
-
-        let mut downloaders = get_downloaders().lock().unwrap();
-        downloaders.remove(&downloader_id);
     });
 
     downloader_id
@@ -299,9 +296,6 @@ pub extern "C" fn start_download_id(id: i32) -> i32 {
 
                     let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
                 }
-
-                let mut downloaders = get_downloaders().lock().unwrap();
-                downloaders.remove(&id);
             });
             0
         }
@@ -340,9 +334,6 @@ pub extern "C" fn start_multiple_downloads_id(id: i32) -> i32 {
 
                     let _ = send_message(event, data, &config, &ws_client, &socket_client).await;
                 }
-
-                let mut downloaders = get_downloaders().lock().unwrap();
-                downloaders.remove(&id);
             });
             0
         }
@@ -365,7 +356,10 @@ pub extern "C" fn pause_download(id: i32) -> i32 {
             });
             0
         }
-        None => -1,
+        None => {
+            // 下载已完成或不存在，视为已暂停成功
+            0
+        }
     }
 }
 
@@ -409,7 +403,10 @@ pub extern "C" fn stop_download(id: i32) -> i32 {
                 Err(_) => -1,
             }
         }
-        None => -1,
+        None => {
+            // 下载已完成或不存在，视为已停止成功
+            0
+        }
     }
 }
 
