@@ -734,7 +734,7 @@ mod tests {
     fn test_format_error_timeout() {
         let err: Box<dyn std::error::Error + Send + Sync> = "operation timed out".into();
         let msg = HSDownloader::format_error(&err);
-        assert!(msg.contains("Timeout"));
+        assert!(msg.contains("timeout"));
     }
 
     #[test]

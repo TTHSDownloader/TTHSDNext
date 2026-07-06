@@ -77,23 +77,23 @@ impl ED2KDownloader {
 
 /// Simple URL percent-decode (handles %XX sequences only)
 fn percent_decode(s: &str) -> String {
-    let mut result = String::new();
+    let mut decoded_bytes = Vec::new();
     let bytes = s.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
             if let Ok(hex) = std::str::from_utf8(&bytes[i+1..i+3]) {
                 if let Ok(byte) = u8::from_str_radix(hex, 16) {
-                    result.push(byte as char);
+                    decoded_bytes.push(byte);
                     i += 3;
                     continue;
                 }
             }
         }
-        result.push(bytes[i] as char);
+        decoded_bytes.push(bytes[i]);
         i += 1;
     }
-    result
+    String::from_utf8(decoded_bytes).unwrap_or_default()
 }
 
 #[async_trait::async_trait]
