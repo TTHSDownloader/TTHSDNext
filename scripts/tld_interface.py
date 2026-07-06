@@ -213,16 +213,17 @@ class TLDownloader:
             dll_path: 动态库路径。若为 None，根据操作系统在当前目录下寻找默认文件名。
             dir_path: 下载目录路径。若为 None，默认根据 dll_path 的方式。
         """
-        if dll_path is None:
-            dll_path = Path.cwd() / _default_dll_name()
-        if dir_path is not None:
-            dll_path = Path(dir_path).resolve() / _default_dll_name()
-        else:
+        if dll_path is not None:
+            # 用户显式指定了 dll_path，直接使用，不替换文件名
             if isinstance(dll_path, str):
                 dll_path = Path(dll_path)
-            dll_path = dll_path.parent / _default_dll_name()
-
-        dll_path = Path(dll_path).resolve()
+            dll_path = dll_path.resolve()
+        elif dir_path is not None:
+            # 只指定了目录，用默认文件名
+            dll_path = Path(dir_path).resolve() / _default_dll_name()
+        else:
+            # 都没指定，用当前目录 + 默认文件名
+            dll_path = Path.cwd() / _default_dll_name()
         if not dll_path.exists():
             raise FileNotFoundError(
                 f"动态库文件不存在: {dll_path}\n"

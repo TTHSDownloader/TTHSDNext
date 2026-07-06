@@ -39,8 +39,11 @@ def dll_path() -> Path:
     elif sys.platform == "darwin":
         candidates = [
             PROJECT_ROOT / "TaiLerDownloader.dylib",
+            PROJECT_ROOT / "TaiLerDownloader_arm64.dylib",
             PROJECT_ROOT / "target/release/TaiLerDownloader.dylib",
+            PROJECT_ROOT / "target/release/TaiLerDownloader_arm64.dylib",
             PROJECT_ROOT / "target/debug/TaiLerDownloader.dylib",
+            PROJECT_ROOT / "target/debug/TaiLerDownloader_arm64.dylib",
         ]
     else:
         candidates = [
